@@ -17,7 +17,10 @@ flag testing
 library
   build-depends:   ghc,
                    base         == 4.*,
+                   filepath,
+                   haskell98,
                    parsec       == 2.1.0.*,
+                   HUnit        >= 1.2,
                    Cabal        >= 1.5 && < 1.7
   hs-source-dirs:  src
   extensions:      CPP, PatternGuards
@@ -25,4 +28,9 @@ library
 
   Exposed-modules:
         Text.LDIF
+
+executable unitTests
+  main-is: unitTests.hs
+  hs-source-dirs:  test, src
+  extensions:      CPP, PatternGuards, DeriveDataTypeable 
 

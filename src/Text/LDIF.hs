@@ -1,5 +1,6 @@
 module Text.LDIF (
-	parseLDIF,
+	parseLDIFStr,
+	parseLDIFFile,
  	LDIF(..),   
         Record(..),
         Change(..),
@@ -17,89 +18,109 @@ type AttrValue = (Attribute, Value)
 type DN = String
 
 data LDIF = LDIFContent { lcVersion :: Maybe String, lcEntries :: [Record] }
-          | LDIFChanges { lcVersion :: Maybe String, lcEntries :: [Record] } 
+          | LDIFChanges { lcVersion :: Maybe String, lcEntries :: [Record] } deriving Show
 
 data Record = AttrValRecord { recDN :: DN, recAttrVals :: [AttrValue] }  
-	    | ChangeRecord  { recDN :: DN, recOp :: Change }
+	    | ChangeRecord  { recDN :: DN, recOp :: Change } deriving Show
 
 data Change = ChangeAdd     { chAttrVals :: [AttrValue] }
             | ChangeDelete 
             | ChangeModify  { chMods :: [Modify] }
-            | ChangeModDN 
+            | ChangeModDN  deriving Show
 
 data Modify = ModAdd     { modAttr :: Attribute, modAttrVals :: [AttrValue] }
             | ModDelete  { modAttr :: Attribute, modAttrVals :: [AttrValue] }
-            | ModReplace { modAttr :: Attribute, modAttrVals :: [AttrValue] }
+            | ModReplace { modAttr :: Attribute, modAttrVals :: [AttrValue] } deriving Show
 
-parseLDIF :: String -> Either ParseError LDIF
-parseLDIF input = parse pLdif "(param)" input
+parseLDIFStr :: String -> Either ParseError LDIF
+parseLDIFStr input = parse pLdif "(param)" input
+
+parseLDIFFile :: String -> IO (Either ParseError LDIF)
+parseLDIFFile name = do
+	input <- readFile name
+	return $ parse pLdif name input
 
 -- | Parsec ldif parser
 pLdif :: CharParser st LDIF
 pLdif = do
-    try (pLdifContent) 
-    <|> pLdifChanges
+    try (pLdifChanges) 
+    <|> pLdifContent
 
 pLdifChanges :: CharParser st LDIF
 pLdifChanges = do
     ver <- optionMaybe (pVersionSpec)
-    recs <- many1 (pChangeRec)
+    recs <- sepEndBy1 pChangeRec pSEPs
     return $ LDIFChanges ver recs
 
 pLdifContent :: CharParser st LDIF
 pLdifContent = do
     ver <- optionMaybe (pVersionSpec)
-    recs <- many1 (pAttrValRec)
+    recs <- sepEndBy1 pAttrValRec pSEPs
     return $ LDIFContent ver recs
 
 pAttrValRec ::  CharParser st Record
 pAttrValRec = do
     dn <- pDNSpec
-    attrVals <- many1 (pAttrValSpec)
+    pSEP
+    attrVals <- sepEndBy1 (pAttrValSpec) pSEP
     return $ AttrValRecord dn attrVals
 
 pChangeRec :: CharParser st Record
 pChangeRec = do
-    string "changetype:"
-    pFILL
     try (pChangeAdd) 
     <|> try (pChangeDel)
     <|> try (pChangeMod)
-    <|> pChangeModDN
+    <|> (pChangeModDN)
 
-pChangeAdd :: CharParser st Change
+pChangeAdd :: CharParser st Record
 pChangeAdd = do
-     string "add"
-     pSEP
-     vals <- many1 (pAttrValSpec)
-     return $ ChangeAdd vals
+    dn <- pDNSpec
+    pSEP
+    string "changetype:"
+    pFILL
+    string "add"
+    pSEP
+    vals <- sepEndBy1 (pAttrValSpec) pSEP
+    return $ ChangeRecord dn (ChangeAdd vals)
 
-pChangeDel :: CharParser st Change
+pChangeDel :: CharParser st Record
 pChangeDel = do
-     string "delete"
-     pSEP
-     return $ ChangeDelete
+    dn <- pDNSpec
+    pSEP
+    string "changetype:"
+    pFILL
+    string "delete"
+    pSEP
+    return $ ChangeRecord dn ChangeDelete
 
-pChangeMod :: CharParser st Change
+pChangeMod :: CharParser st Record
 pChangeMod = do
-     string "modify"
-     pSEP
-     mods <- many (pModSpec)
-     return $ ChangeModify mods
+    dn <- pDNSpec
+    pSEP
+    string "changetype:"
+    pFILL
+    string "modify"
+    pSEP
+    mods <- sepEndBy1 (pModSpec) (char '-' >> pSEP)
+    return $ ChangeRecord dn (ChangeModify mods)
 
-pChangeModDN :: CharParser st Change
+pChangeModDN :: CharParser st Record
 pChangeModDN = do
-     string "modrdn" 
-     pSEP
-     string "newrdn:"
-     pFILL 
-     pRDN
-     pSEP
-     string "deleteoldrdn:"
-     pFILL
-     oneOf "01"
-     pSEP
-     return $ ChangeModDN
+    dn <- pDNSpec
+    pSEP
+    string "changetype:"
+    pFILL
+    string "modrdn" 
+    pSEP
+    string "newrdn:"
+    pFILL 
+    pRDN
+    pSEP
+    string "deleteoldrdn:"
+    pFILL
+    oneOf "01"
+    pSEP
+    return $ ChangeRecord dn ChangeModDN
 
 pRDN = pSafeString
 
@@ -115,13 +136,13 @@ pVersionSpec = do
    pFILL
    many1 (digit)
 
-pModSpec :: CharParser st (String,String)
+pModSpec :: CharParser st Modify
 pModSpec = do
    mod <- pModType
    pFILL
    att <- pAttributeDescription 
    pSEP 
-   vals <- pAttrValSpec
+   vals <- sepEndBy (pAttrValSpec) pSEP
    return $ mkMod mod att vals
 
 mkMod mod att vals | mod == "add:" = ModAdd att vals
@@ -183,6 +204,10 @@ pSPACE = space
 pFILL :: CharParser st ()
 pFILL = spaces
 
-pSEP = do
-   try (char '\r' >> char '\n')
-   <|> (char '\n')
+pSEP = newline
+
+pSEPs = many (newline)
+
+--do
+--   try (char '\r' >> char '\n')
+ --  <|> (char '\n')
