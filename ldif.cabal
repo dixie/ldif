@@ -12,7 +12,7 @@ Description:
 Category:        Text
 Stability:       experimental
 Build-Type:      Simple
-Cabal-Version:   >= 1.2.3
+Cabal-Version:   >= 1.6
 Extra-Source-Files:
     doc/rfc2253.txt
     doc/rfc2849.txt
@@ -31,18 +31,16 @@ flag test
   description: Build test program.
   default:     False
 
-
 Library
   Build-Depends:   ghc,
-                   base         == 4.*,
+                   base         < 5,
                    filepath,
                    haskell98,
-                   parsec       == 2.1.0.*,
+                   parsec       >= 2.1.0,
                    Cabal        >= 1.5 && < 1.7
   Hs-Source-Dirs:  src
   Extensions:      CPP, PatternGuards
   Ghc-Options:      -Wall -fno-warn-orphans
-                    -O2
 
   Exposed-modules:
         Text.LDIF
