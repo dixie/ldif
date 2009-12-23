@@ -1,36 +1,55 @@
-name:            ldif
-version:         0.1
-license:         BSD3
-author:          Radoslav Dorcik <radoslav.dorcik@gmail.com>
-maintainer:      Radoslav Dorcik <radoslav.dorcik@gmail.com>
-description:     LDIF parser 
-synopsis:        Directory LDIF format parser
-category:        Text
-stability:       provisional
-build-type:      Simple
-cabal-version:   >= 1.4
+Name:            ldif
+Version:         0.0.1
+License:         BSD3
+License-File:    LICENSE
+Synopsis:        The LDAP Data Interchange Format (LDIF) parser 
+Author:          Radoslav Dorcik <radoslav.dorcik@gmail.com>
+Maintainer:      radoslav.dorcik@gmail.com
+Description:     
+   LDIF files parser implementation using Parsec and based
+   on RFC 2849 - The LDAP Data Interchange Format (LDIF).
 
-flag testing
-  description: Enable Debugging things like QuickCheck properties, etc.
-  default: False
+Category:        Text
+Stability:       experimental
+Build-Type:      Simple
+Cabal-Version:   >= 1.2.3
+Extra-Source-Files:
+    doc/rfc2253.txt
+    doc/rfc2849.txt
+    tests/TestMain.hs
+    tests/data/OK_simple03.modify.ldif
+    tests/data/OK_simple01.modify.ldif
+    tests/data/OK_simple02.content.ldif
+    tests/data/OK_multivalue.modify.ldif
+    tests/data/OK_simple01.content.ldif
 
-library
-  build-depends:   ghc,
+Source-Repository head
+  type:     darcs
+  location: http://rampa.sk/repo/ldif
+
+flag test
+  description: Build test program.
+  default:     False
+
+
+Library
+  Build-Depends:   ghc,
                    base         == 4.*,
                    filepath,
                    haskell98,
                    parsec       == 2.1.0.*,
-                   HUnit        >= 1.2,
                    Cabal        >= 1.5 && < 1.7
-  hs-source-dirs:  src
-  extensions:      CPP, PatternGuards
-  ghc-options:     -Wall
+  Hs-Source-Dirs:  src
+  Extensions:      CPP, PatternGuards
+  Ghc-Options:      -Wall -fno-warn-orphans
+                    -O2
 
   Exposed-modules:
         Text.LDIF
 
-executable unitTests
-  main-is: unitTests.hs
-  hs-source-dirs:  test, src
-  extensions:      CPP, PatternGuards, DeriveDataTypeable 
-
+Executable test
+  Hs-Source-Dirs:  src, tests
+  Main-Is:         TestMain.hs
+  Build-Depends:   base, HUnit
+  if !flag(test)
+    Buildable:     False

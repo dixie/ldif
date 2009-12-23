@@ -17,24 +17,31 @@ type Value = String
 type AttrValue = (Attribute, Value)
 type DN = String
 
+-- | Represents LDIF structure, it can be either simply LDIF data dump or
+-- | changes LDIF with LDAP operations 
 data LDIF = LDIFContent { lcVersion :: Maybe String, lcEntries :: [Record] }
           | LDIFChanges { lcVersion :: Maybe String, lcEntries :: [Record] } deriving Show
 
+-- | Represents one record or entry within LDIF file with DN and content
 data Record = AttrValRecord { recDN :: DN, recAttrVals :: [AttrValue] }  
 	    | ChangeRecord  { recDN :: DN, recOp :: Change } deriving Show
 
+-- | Represents one LDAP operation within changes LDIF
 data Change = ChangeAdd     { chAttrVals :: [AttrValue] }
             | ChangeDelete 
             | ChangeModify  { chMods :: [Modify] }
             | ChangeModDN  deriving Show
 
+-- | Represents ChangeModify operations upon one entry within given DN
 data Modify = ModAdd     { modAttr :: Attribute, modAttrVals :: [AttrValue] }
             | ModDelete  { modAttr :: Attribute, modAttrVals :: [AttrValue] }
             | ModReplace { modAttr :: Attribute, modAttrVals :: [AttrValue] } deriving Show
 
+-- | Parse string as LDIF content and return LDIF or ParseError
 parseLDIFStr :: String -> Either ParseError LDIF
-parseLDIFStr input = parse pLdif "(param)" input
+parseLDIFStr = parse pLdif "(param)" 
 
+-- | Read and parse provided file and return LDIF or ParseError
 parseLDIFFile :: String -> IO (Either ParseError LDIF)
 parseLDIFFile name = do
 	input <- readFile name
@@ -42,19 +49,17 @@ parseLDIFFile name = do
 
 -- | Parsec ldif parser
 pLdif :: CharParser st LDIF
-pLdif = do
-    try (pLdifChanges) 
-    <|> pLdifContent
+pLdif = try pLdifChanges <|> pLdifContent
 
 pLdifChanges :: CharParser st LDIF
 pLdifChanges = do
-    ver <- optionMaybe (pVersionSpec)
+    ver <- optionMaybe pVersionSpec
     recs <- sepEndBy1 pChangeRec pSEPs
     return $ LDIFChanges ver recs
 
 pLdifContent :: CharParser st LDIF
 pLdifContent = do
-    ver <- optionMaybe (pVersionSpec)
+    ver <- optionMaybe pVersionSpec
     recs <- sepEndBy1 pAttrValRec pSEPs
     return $ LDIFContent ver recs
 
@@ -62,15 +67,14 @@ pAttrValRec ::  CharParser st Record
 pAttrValRec = do
     dn <- pDNSpec
     pSEP
-    attrVals <- sepEndBy1 (pAttrValSpec) pSEP
+    attrVals <- sepEndBy1 pAttrValSpec pSEP
     return $ AttrValRecord dn attrVals
 
 pChangeRec :: CharParser st Record
-pChangeRec = do
-    try (pChangeAdd) 
-    <|> try (pChangeDel)
-    <|> try (pChangeMod)
-    <|> (pChangeModDN)
+pChangeRec = try pChangeAdd
+         <|> try pChangeDel
+         <|> try pChangeMod
+         <|> pChangeModDN
 
 pChangeAdd :: CharParser st Record
 pChangeAdd = do
@@ -80,7 +84,7 @@ pChangeAdd = do
     pFILL
     string "add"
     pSEP
-    vals <- sepEndBy1 (pAttrValSpec) pSEP
+    vals <- sepEndBy1 pAttrValSpec pSEP
     return $ ChangeRecord dn (ChangeAdd vals)
 
 pChangeDel :: CharParser st Record
@@ -101,7 +105,7 @@ pChangeMod = do
     pFILL
     string "modify"
     pSEP
-    mods <- sepEndBy1 (pModSpec) (char '-' >> pSEP)
+    mods <- sepEndBy1 pModSpec (char '-' >> pSEP)
     return $ ChangeRecord dn (ChangeModify mods)
 
 pChangeModDN :: CharParser st Record
@@ -122,6 +126,7 @@ pChangeModDN = do
     pSEP
     return $ ChangeRecord dn ChangeModDN
 
+pRDN :: CharParser st String
 pRDN = pSafeString
 
 pDNSpec :: CharParser st DN
@@ -134,80 +139,75 @@ pVersionSpec :: CharParser st String
 pVersionSpec = do
    string "version:"
    pFILL
-   many1 (digit)
+   many1 digit
 
 pModSpec :: CharParser st Modify
 pModSpec = do
-   mod <- pModType
+   modType <- pModType
    pFILL
    att <- pAttributeDescription 
    pSEP 
-   vals <- sepEndBy (pAttrValSpec) pSEP
-   return $ mkMod mod att vals
+   vals <- sepEndBy pAttrValSpec pSEP
+   return $ mkMod modType att vals
 
-mkMod mod att vals | mod == "add:" = ModAdd att vals
-                   | mod == "delete:" = ModDelete att vals
-                   | mod == "replace:" = ModReplace att vals
-                   | otherwise = error $ "unexpected mod:" ++ mod
+-- TODO: Use something safe instead of error
+mkMod :: String -> String -> [AttrValue] -> Modify
+mkMod modType att vals | modType == "add:" = ModAdd att vals
+                       | modType == "delete:" = ModDelete att vals
+                       | modType == "replace:" = ModReplace att vals
+                       | otherwise = error $ "unexpected mod:" ++ modType
 
 pModType :: CharParser st String
-pModType = do
-       try (string "add:")
-   <|> try (string "delete:")
-   <|> string "replace:"
+pModType = try (string "add:")
+       <|> try (string "delete:")
+       <|> string "replace:"
 
 pAttributeDescription :: CharParser st String
-pAttributeDescription = do
-   pAttributeType
+pAttributeDescription = pAttributeType
 
 pAttributeType :: CharParser st String
-pAttributeType = do
-   try (pLdapOid)
-   <|> (do { l <- letter; o <- pAttrTypeChars; return $ l:o } )
+pAttributeType = try pLdapOid
+             <|> (do { l <- letter; o <- pAttrTypeChars; return $ l:o } )
 
 pAttrValSpec :: CharParser st AttrValue
 pAttrValSpec = do
    name <- pAttributeDescription
    val  <- pValueSpec
-   return $ (name, val)
+   return (name, val)
 
 pValueSpec :: CharParser st Value
-pValueSpec = do
-   try (char ':' >> char ':' >> pFILL >> pBase64String)
-   <|> try (char ':' >> pFILL >> pSafeString) 
-   <|> (char ':' >> char '<' >> pFILL >> pURL)
+pValueSpec = try (char ':' >> char ':' >> pFILL >> pBase64String)
+         <|> try (char ':' >> pFILL >> pSafeString) 
+         <|> (char ':' >> char '<' >> pFILL >> pURL)
 
+pURL :: CharParser st String
 pURL = pSafeString
 
 pSafeString :: CharParser st String
 pSafeString = do
    c <- noneOf "\n\r :<"
-   r <- many (noneOf ("\n\r"))
+   r <- many (noneOf "\n\r")
    return $ c:r
  
+pBase64String :: CharParser st String
 pBase64String = pSafeString
 
 pAttrTypeChars :: CharParser st String
-pAttrTypeChars = do 
-   many (satisfy (\x -> isAlphaNum x || x == '-'))
+pAttrTypeChars = many (satisfy (\x -> isAlphaNum x || x == '-'))
 
 pLdapOid :: CharParser st String
 pLdapOid = do
-   num <- many1 (digit)
-   rest <- many (do { string "."; n <- many1 (digit); return $ "."++n})
-   return $ num ++ (concat $ rest)
-
--- | Basic Tokens
-pSPACE :: CharParser st Char 
-pSPACE = space
+   num <- many1 digit
+   rest <- many (do { string "."; n <- many1 digit; return $ '.':n})
+   return $ num ++ concat rest
 
 pFILL :: CharParser st ()
 pFILL = spaces
 
-pSEP = newline
+pSEP :: CharParser st ()
+pSEP = try (char '\r' >> char '\n' >> return () )
+   <|> (char '\n' >> return () )
 
-pSEPs = many (newline)
+pSEPs :: CharParser st ()
+pSEPs = many pSEP >> return ()
 
---do
---   try (char '\r' >> char '\n')
- --  <|> (char '\n')

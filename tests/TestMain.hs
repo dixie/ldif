@@ -6,13 +6,22 @@ import Directory
 import System.FilePath
 import Control.Monad (liftM)
 
-validLDIFDir = "valid"
+ldifDir = "data"
 
 main = do
-    validLDIFFiles <- liftM (filter (\x -> isSuffixOf ".ldif" x)) $ getDirectoryContents validLDIFDir
-    runTestTT (tests validLDIFFiles)
+    ls <- getLDIFs ldifDir
+    runTestTT (tests ls)
 
-testCasesParseValid validFiles = map (\x -> TestCase (assertParsedOK x)) (map (validLDIFDir </>) validFiles)
+getLDIFs :: String -> IO [String]
+getLDIFs dr = do
+    liftM (map (dr </>)) $ liftM (filter isLDIF) $ getDirectoryContents dr
+  
+isOK x = isPrefixOf "OK" (takeFileName x)
+isLDIF x = isSuffixOf ".ldif" x
+
+tests ls = TestList (testCasesParseOK ls)
+
+testCasesParseOK ls = map (\x -> TestCase (assertParsedOK x)) $ filter (isOK) ls
 
 assertParsedOK filename = do
      ret <- parseLDIFFile filename 
@@ -27,6 +36,4 @@ assertTypeContent n x = assertFailure $ n ++ " is not type of LDIFContent"
 
 assertTypeChanges n l@(LDIFChanges _ _) = assertBool "Valid Changes Type" True >> (putStrLn $ "\n\n" ++ n ++ "\n\n" ++ (show l))
 assertTypeChanges n x = assertFailure $ n ++ " is not type of LDIFChanges"
-
-tests validFiles = TestList (testCasesParseValid validFiles)
   
