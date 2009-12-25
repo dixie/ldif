@@ -1,5 +1,5 @@
 Name:            ldif
-Version:         0.0.1
+Version:         0.0.2
 License:         BSD3
 License-File:    LICENSE
 Synopsis:        The LDAP Data Interchange Format (LDIF) parser 
