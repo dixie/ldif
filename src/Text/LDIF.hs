@@ -11,6 +11,7 @@ where
 import Text.ParserCombinators.Parsec
 import Data.Either
 import Data.Char
+import Data.List (isPrefixOf)
 
 type Attribute = String
 type Value = String
@@ -39,13 +40,36 @@ data Modify = ModAdd     { modAttr :: Attribute, modAttrVals :: [AttrValue] }
 
 -- | Parse string as LDIF content and return LDIF or ParseError
 parseLDIFStr :: String -> Either ParseError LDIF
-parseLDIFStr = parse pLdif "(param)" 
+parseLDIFStr = parse pLdif "(param)" . preproc 
 
 -- | Read and parse provided file and return LDIF or ParseError
 parseLDIFFile :: String -> IO (Either ParseError LDIF)
 parseLDIFFile name = do
 	input <- readFile name
-	return $ parse pLdif name input
+	return $ parse pLdif name (preproc input)
+
+-- | Preprocessing for concat wrapped lines and remove comment lines
+preproc :: String -> String
+preproc = unwrap . stripComments
+
+-- | Remove Comment Lines
+stripComments :: String -> String
+stripComments input = unlines $ filter (not . isPrefixOf "#") $ lines input
+
+-- | Unwrap lines, lines with space at begin is continue of previous line 
+unwrap :: String -> String
+unwrap input = unlines $ preprocLines $ lines input
+   where 
+    preprocLines xs = unbox $ foldl (preprocLine) ([],Nothing) xs
+    preprocLine (ys,r) []                 = (addLineMaybe ys r,Just []) 
+    preprocLine (ys,r) (l:lx) | l == ' '  = (ys,concatLineMaybe r lx)
+                              | otherwise = (addLineMaybe ys r, Just $ l:lx)
+    concatLineMaybe Nothing  x = Just x
+    concatLineMaybe (Just y) x = Just (y++x)
+    addLineMaybe xs Nothing  = xs
+    addLineMaybe xs (Just x) = xs++[x]
+    unbox (ys,Nothing) = ys
+    unbox (ys,Just x)  = ys++[x]
 
 -- | Parsec ldif parser
 pLdif :: CharParser st LDIF
