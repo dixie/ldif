@@ -150,12 +150,12 @@ pModSpec = do
    vals <- sepEndBy pAttrValSpec pSEP
    return $ mkMod modType att vals
 
--- TODO: Use something safe instead of error
 mkMod :: String -> String -> [AttrValue] -> Modify
 mkMod modType att vals | modType == "add:" = ModAdd att vals
                        | modType == "delete:" = ModDelete att vals
                        | modType == "replace:" = ModReplace att vals
-                       | otherwise = error $ "unexpected mod:" ++ modType
+                       | otherwise = error $ "unexpected mod:" ++ modType 
+                         -- error can not be reached because pModType
 
 pModType :: CharParser st String
 pModType = try (string "add:")
