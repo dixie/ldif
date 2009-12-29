@@ -3,3 +3,4 @@
 2. DONE: create preprocessor for concat split long lines & remove comments
 3. create parser on DN string (parseDNStr) 
 4. create serializer back to LDIF String
+5. refactoring of packages, create Types, Parser and Proc
