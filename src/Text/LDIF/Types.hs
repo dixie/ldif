@@ -1,6 +1,7 @@
 module Text.LDIF.Types (
  	LDIF(..),   
-        Record(..),
+        ContentRecord(..),
+        ChangeRecord(..),
         Change(..),
         Modify(..), 
         DN(..), 
@@ -15,25 +16,27 @@ type AttrValue = (Attribute, Value)
 
 -- | Represents LDIF structure, it can be either simply LDIF data dump or
 -- | changes LDIF with LDAP operations 
-data LDIF = LDIFContent { lcVersion :: Maybe String, lcEntries :: [Record] }
-          | LDIFChanges { lcVersion :: Maybe String, lcEntries :: [Record] } deriving Show
+data LDIF = LDIFContent { lcVersion :: Maybe String, lcEntries :: [ContentRecord] }
+          | LDIFChanges { lcVersion :: Maybe String, lcChanges :: [ChangeRecord] } deriving (Show, Eq)
 
--- | Represents one record or entry within LDIF file with DN and content
-data Record = AttrValRecord { recDN :: DN, recAttrVals :: [AttrValue] }  
-	    | ChangeRecord  { recDN :: DN, recOp :: Change } deriving Show
+-- | Represents one data record within LDIF file with DN and content
+data ContentRecord =ContentRecord { coDN :: DN, coAttrVals :: [AttrValue] } deriving (Show, Eq)
+
+-- | Represents one change record within LDIF file with DN and content
+data ChangeRecord = ChangeRecord  { chDN :: DN, chOp :: Change } deriving (Show, Eq)
 
 -- | Represents one LDAP operation within changes LDIF
 data Change = ChangeAdd     { chAttrVals :: [AttrValue] }
             | ChangeDelete 
             | ChangeModify  { chMods :: [Modify] }
-            | ChangeModDN  deriving Show
+            | ChangeModDN  deriving (Show, Eq)
 
 -- | Represents ChangeModify operations upon one entry within given DN
-data Modify = ModAdd     { modAttr :: Attribute, modAttrVals :: [AttrValue] }
-            | ModDelete  { modAttr :: Attribute, modAttrVals :: [AttrValue] }
-            | ModReplace { modAttr :: Attribute, modAttrVals :: [AttrValue] } deriving Show
+data Modify = ModAdd     { modAttr :: Attribute, modAttrVals :: [Value] }
+            | ModDelete  { modAttr :: Attribute, modAttrVals :: [Value] }
+            | ModReplace { modAttr :: Attribute, modAttrVals :: [Value] } deriving (Show, Eq)
 
 -- | Represents Distinguished Name (DN)
-data DN = DN { dnAttrVals :: [AttrValue] } deriving Show
+data DN = DN { dnAttrVals :: [AttrValue] } deriving (Show, Eq)
 
 

@@ -63,20 +63,20 @@ pLdifContent = do
     recs <- sepEndBy1 pAttrValRec pSEPs
     return $ LDIFContent ver recs
 
-pAttrValRec ::  CharParser st Record
+pAttrValRec ::  CharParser st ContentRecord
 pAttrValRec = do
     dn <- pDNSpec
     pSEP
     attrVals <- sepEndBy1 pAttrValSpec pSEP
-    return $ AttrValRecord dn attrVals
+    return $ ContentRecord dn attrVals
 
-pChangeRec :: CharParser st Record
+pChangeRec :: CharParser st ChangeRecord
 pChangeRec = try pChangeAdd
          <|> try pChangeDel
          <|> try pChangeMod
          <|> pChangeModDN
 
-pChangeAdd :: CharParser st Record
+pChangeAdd :: CharParser st ChangeRecord
 pChangeAdd = do
     dn <- pDNSpec
     pSEP
@@ -87,7 +87,7 @@ pChangeAdd = do
     vals <- sepEndBy1 pAttrValSpec pSEP
     return $ ChangeRecord dn (ChangeAdd vals)
 
-pChangeDel :: CharParser st Record
+pChangeDel :: CharParser st ChangeRecord
 pChangeDel = do
     dn <- pDNSpec
     pSEP
@@ -97,7 +97,7 @@ pChangeDel = do
     pSEP
     return $ ChangeRecord dn ChangeDelete
 
-pChangeMod :: CharParser st Record
+pChangeMod :: CharParser st ChangeRecord
 pChangeMod = do
     dn <- pDNSpec
     pSEP
@@ -108,7 +108,7 @@ pChangeMod = do
     mods <- sepEndBy1 pModSpec (char '-' >> pSEP)
     return $ ChangeRecord dn (ChangeModify mods)
 
-pChangeModDN :: CharParser st Record
+pChangeModDN :: CharParser st ChangeRecord
 pChangeModDN = do
     dn <- pDNSpec
     pSEP
@@ -170,9 +170,9 @@ pModSpec = do
    return $ mkMod modType att vals
 
 mkMod :: String -> String -> [AttrValue] -> Modify
-mkMod modType att vals | modType == "add:" = ModAdd att vals
-                       | modType == "delete:" = ModDelete att vals
-                       | modType == "replace:" = ModReplace att vals
+mkMod modType att vals | modType == "add:" = ModAdd att (map (snd) vals)
+                       | modType == "delete:" = ModDelete att (map (snd) vals)
+                       | modType == "replace:" = ModReplace att (map (snd) vals)
                        | otherwise = error $ "unexpected mod:" ++ modType 
                          -- error can not be reached because pModType
 

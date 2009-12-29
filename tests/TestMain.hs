@@ -12,16 +12,23 @@ main = do
     ls <- getLDIFs ldifDir
     runTestTT (tests ls)
 
+tests ls = TestList $ (testCasesParseOK ls) ++ (testCasesDIFF)
+
+--
+-- Test Cases
+--
+testCasesDIFF = [TestCase (assertEqual "dummy" True True)]
+testCasesParseOK ls = map (\x -> TestCase (assertParsedOK x)) $ filter (isOK) ls
+
+--
+-- Support Methods
+--
 getLDIFs :: String -> IO [String]
 getLDIFs dr = do
     liftM (map (dr </>)) $ liftM (filter isLDIF) $ getDirectoryContents dr
   
 isOK x = isPrefixOf "OK" (takeFileName x)
 isLDIF x = isSuffixOf ".ldif" x
-
-tests ls = TestList (testCasesParseOK ls)
-
-testCasesParseOK ls = map (\x -> TestCase (assertParsedOK x)) $ filter (isOK) ls
 
 assertParsedOK filename = do
      ret <- parseLDIFFile filename 
