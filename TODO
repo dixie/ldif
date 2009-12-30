@@ -1,8 +1,13 @@
-1. DONE: replace error call in mkMod with parser error
+* DONE replace error call in mkMod with parser error
    (Not needed)
-2. DONE: create preprocessor for concat split long lines & remove comments
-3. TODO: create parser on DN string (parseDNStr) 
-4. TODO: create serializer back to LDIF String
-5. DONE: refactoring of packages, create Types, Parser and Proc
-6. TODO: error handling, modify add: <attrX> and than <attrY>:<value>,
+* DONE create preprocessor for concat split long lines & remove comments
+* DONE refactoring of packages, create Types, Parser and Proc
+* TODO update parseDNStr to parse all kind of DN notations
+* TODO error handling, modify add: <attrX> and than <attrY>:<value>,
          need to be asserted that <attrX> and <attrY> are the same.
+* TODO Implement the base64 parsing
+* TODO Implement modifyDN parsing
+* TODO update serializers back to LDIF for base64 & all DN notations
+* TODO add module tests for versioned LDIFs
+* TODO add module tests for base64 parsing
+
