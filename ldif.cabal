@@ -6,16 +6,17 @@ Synopsis:        The LDAP Data Interchange Format (LDIF) parser
 Author:          Radoslav Dorcik <radoslav.dorcik@gmail.com>
 Maintainer:      radoslav.dorcik@gmail.com
 Description:     
-   LDIF files parser implementation using Parsec and based
-   on RFC 2849 - The LDAP Data Interchange Format (LDIF).
-
-   Current implementation is relaxed and need to be updated
-   for base64 encoded values and various DN escaping. 
-
-   It includes following tool:
-   - diffLDIF command generates change LDIF between two 
-     content LDIF files. 
-
+ LDIF files parser implementation using Parsec and based
+ on RFC 2849 - The LDAP Data Interchange Format (LDIF).
+ .
+ Current implementation is unfinished and need to be enhanced
+ for base64 encoded values and various DN escaping. 
+ .
+ It includes following tool:
+ .
+ - diffLDIF command generates change LDIF between two 
+   content LDIF files. 
+ .
 Category:        Text
 Stability:       experimental
 Build-Type:      Simple
@@ -57,6 +58,10 @@ Library
 
   Exposed-modules:
         Text.LDIF
+        Text.LDIF.Types
+        Text.LDIF.Parser
+        Text.LDIF.Printer
+        Text.LDIF.Proc
 
 Executable diffLDIF
   Hs-Source-Dirs:  src
