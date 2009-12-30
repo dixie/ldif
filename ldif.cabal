@@ -45,6 +45,10 @@ Library
   Exposed-modules:
         Text.LDIF
 
+Executable diffLDIF
+  Hs-Source-Dirs:  src
+  Main-Is:         diffLDIF.hs
+
 Executable test
   Hs-Source-Dirs:  src, tests
   Main-Is:         TestMain.hs

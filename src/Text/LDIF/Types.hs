@@ -1,3 +1,4 @@
+-- | LDIF related types
 module Text.LDIF.Types (
  	LDIF(..),   
         ContentRecord(..),
