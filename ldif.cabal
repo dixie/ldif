@@ -23,7 +23,7 @@ Build-Type:      Simple
 Cabal-Version:   >= 1.6
 Extra-Source-Files:
     run_tests.sh
-    TODO
+    TODO.org
     doc/rfc2253.txt
     doc/rfc2849.txt
     tests/TestMain.hs
