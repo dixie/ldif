@@ -39,7 +39,7 @@ Extra-Source-Files:
     
 Source-Repository head
   type:     darcs
-  location: http://rampa.sk/repo/ldif
+  location: http://patch-tag.com/r/dixiecko/ldif
 
 flag test
   description: Build test program.
