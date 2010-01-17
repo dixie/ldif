@@ -9,7 +9,7 @@ import Text.LDIF.Types
 import Text.ParserCombinators.Parsec
 import Data.Either
 import Data.Char
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, foldl')
 
 -- | Parse string as LDIF content and return LDIF or ParseError
 parseLDIFStr :: String -> Either ParseError LDIF
@@ -48,7 +48,7 @@ stripComments input = unlines $ filter (not . isPrefixOf "#") $ lines input
 unwrap :: String -> String
 unwrap input = unlines $ preprocLines $ lines input
    where 
-    preprocLines xs = unbox $ foldl (preprocLine) ([],Nothing) xs
+    preprocLines xs = unbox $ foldl' (preprocLine) ([],Nothing) xs
     preprocLine (ys,r) []                 = (addLineMaybe ys r,Just []) 
     preprocLine (ys,r) (l:lx) | l == ' '  = (ys,concatLineMaybe r lx)
                               | otherwise = (addLineMaybe ys r, Just $ l:lx)
