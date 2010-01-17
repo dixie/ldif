@@ -1,5 +1,6 @@
 module Text.LDIF.Parser (
 	parseLDIFStr,
+        parseLDIFStrAs,
 	parseLDIFFile,
         parseDNStr
 )
@@ -12,13 +13,24 @@ import Data.List (isPrefixOf)
 
 -- | Parse string as LDIF content and return LDIF or ParseError
 parseLDIFStr :: String -> Either ParseError LDIF
-parseLDIFStr = parse pLdif "(param)" . preproc 
+parseLDIFStr = parseLDIFStrAs Nothing 
 
 -- | Read and parse provided file and return LDIF or ParseError
 parseLDIFFile :: String -> IO (Either ParseError LDIF)
 parseLDIFFile name = do
 	input <- readFile name
-	return $ parse pLdif name (preproc input)
+        return $ parseLDIFStrAs' name Nothing input
+
+-- | Read and parse provided string and return LDIF or ParserError
+-- | If LDIF type is specified than given type is expected for parsing 
+-- | and mismatch generates ParseError
+parseLDIFStrAs' :: String -> Maybe LDIFType -> String -> Either ParseError LDIF
+parseLDIFStrAs' nm Nothing                = parse pLdif        nm . preproc
+parseLDIFStrAs' nm (Just LDIFContentType) = parse pLdifContent nm . preproc
+parseLDIFStrAs' nm (Just LDIFChangesType) = parse pLdifChanges nm . preproc
+
+parseLDIFStrAs :: Maybe LDIFType -> String -> Either ParseError LDIF
+parseLDIFStrAs = parseLDIFStrAs' "(param)"
 
 -- | Parse string as DN and return DN type or ParseError
 parseDNStr :: String -> Either ParseError DN

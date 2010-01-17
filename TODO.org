@@ -15,3 +15,5 @@
 * TODO Implement ldifmodify (like ldapmodify)
    offline applying of Change LDIF on Content LDIF
    ldifmodify -h <contentLDIF> -f <changeLDIF> [-o <contentLDIFAfter>] 
+* DONE Change interface for providing parser method with expected type of LDIF
+it allows parse changeldif as contentldif regardless the content.
