@@ -67,6 +67,10 @@ Executable diffLDIF
   Hs-Source-Dirs:  src
   Main-Is:         diffLDIF.hs
 
+Executable ldif2html
+  Hs-Source-Dirs:  src
+  Main-Is:         ldif2html.hs
+
 Executable test
   Hs-Source-Dirs:  src, tests
   Main-Is:         TestMain.hs
