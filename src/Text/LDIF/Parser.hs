@@ -38,7 +38,7 @@ parseDNStr = parse pDN "(param)"
 
 -- | Preprocessing for concat wrapped lines and remove comment lines
 preproc :: String -> String
-preproc = unwrap . stripComments
+preproc = stripComments
 
 -- | Remove Comment Lines
 stripComments :: String -> String
