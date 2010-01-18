@@ -65,13 +65,17 @@ pLdif = try pLdifChanges <|> pLdifContent
 
 pLdifChanges :: CharParser st LDIF
 pLdifChanges = do
+    pSEPs
     ver <- optionMaybe pVersionSpec
+    pSEPs
     recs <- sepEndBy1 pChangeRec pSEPs
     return $ LDIFChanges ver recs
 
 pLdifContent :: CharParser st LDIF
 pLdifContent = do
+    pSEPs
     ver <- optionMaybe pVersionSpec
+    pSEPs
     recs <- sepEndBy1 pAttrValRec pSEPs
     return $ LDIFContent ver recs
 
