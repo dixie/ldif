@@ -50,6 +50,7 @@ Library
                    base         < 5,
                    filepath,
                    haskell98,
+                   containers,
                    parsec       >= 2.1.0,
                    Cabal        >= 1.5 && < 1.9
   Hs-Source-Dirs:  src
