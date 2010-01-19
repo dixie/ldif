@@ -1,5 +1,5 @@
 Name:            ldif
-Version:         0.0.3
+Version:         0.0.4
 License:         BSD3
 License-File:    LICENSE
 Synopsis:        The LDAP Data Interchange Format (LDIF) parser 
@@ -15,7 +15,9 @@ Description:
  It includes following tool:
  .
  - diffLDIF command generates change LDIF between two 
-   content LDIF files. 
+   content LDIF files.
+ - ldif2html command generates hypertext HTML browsable
+   LDIF file. 
  .
 Category:        Text
 Stability:       experimental
