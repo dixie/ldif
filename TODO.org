@@ -17,3 +17,6 @@
    ldifmodify -h <contentLDIF> -f <changeLDIF> [-o <contentLDIFAfter>] 
 * DONE Change interface for providing parser method with expected type of LDIF
 it allows parse changeldif as contentldif regardless the content.
+
+* DONE Add ldif2html which generate hypertext LDIF representation
+* DONE Update unwrap method in preprocessor for feasible resource consuption

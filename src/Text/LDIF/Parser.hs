@@ -38,7 +38,7 @@ parseDNStr = parse pDN "(param)"
 
 -- | Preprocessing for concat wrapped lines and remove comment lines
 preproc :: String -> String
-preproc = stripComments
+preproc = stripComments . unwrap
 
 -- | Remove Comment Lines
 stripComments :: String -> String
@@ -46,18 +46,18 @@ stripComments input = unlines $ filter (not . isPrefixOf "#") $ lines input
 
 -- | Unwrap lines, lines with space at begin is continue of previous line 
 unwrap :: String -> String
-unwrap input = unlines $ preprocLines $ lines input
-   where 
-    preprocLines xs = unbox $ foldl' (preprocLine) ([],Nothing) xs
-    preprocLine (ys,r) []                 = (addLineMaybe ys r,Just []) 
-    preprocLine (ys,r) (l:lx) | l == ' '  = (ys,concatLineMaybe r lx)
-                              | otherwise = (addLineMaybe ys r, Just $ l:lx)
-    concatLineMaybe Nothing  x = Just x
-    concatLineMaybe (Just y) x = Just (y++x)
-    addLineMaybe xs Nothing  = xs
-    addLineMaybe xs (Just x) = xs++[x]
-    unbox (ys,Nothing) = ys
-    unbox (ys,Just x)  = ys++[x]
+unwrap xs = unlines $ takeLines $ lines xs
+
+takeLines :: [String] -> [String]
+takeLines [] = []
+takeLines xs = let (ln,ys) = takeLine xs
+               in ln:takeLines ys
+
+takeLine :: [String] -> (String, [String])
+takeLine []     = ([],[])
+takeLine (x:[]) = (x,[])
+takeLine (x:xs) = let isCont x = " " `isPrefixOf` x  
+                  in (x ++ (concat $ map (tail) $ takeWhile (isCont) xs), dropWhile (isCont) xs) 
 
 -- | Parsec ldif parser
 pLdif :: CharParser st LDIF
