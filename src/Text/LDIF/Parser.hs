@@ -158,6 +158,7 @@ pDN = do
 
 pAttrEqValue :: CharParser st AttrValue
 pAttrEqValue = do
+   pFILL
    att <- pAttributeType
    char '='
    val <- pAttrValueDN
