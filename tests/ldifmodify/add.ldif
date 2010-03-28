@@ -1,0 +1,11 @@
+dn: cn=salary,cn=Administrator,dc=example,dc=com
+objectClass: personSalary
+cn: salary
+maxsalary: 100
+minsalary: 10
+
+dn: cn=salary2,cn=Administrator,dc=example,dc=com
+objectClass: personSalary
+cn: salary2
+maxsalary: 100
+minsalary: 102

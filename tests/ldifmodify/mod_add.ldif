@@ -1,0 +1,11 @@
+dn: cn=The Postmaster,dc=example,dc=com
+changetype: modify
+add: phone
+phone: 5656556
+
+dn: cn=Administrator,dc=example,dc=com
+changetype: modify
+delete: phone
+-
+add: phone
+phone: 5656556

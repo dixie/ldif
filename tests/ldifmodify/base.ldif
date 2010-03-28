@@ -1,0 +1,13 @@
+dn: cn=The Postmaster,dc=example,dc=com
+objectClass: organizationalRole
+cn: The Postmaster
+phone: 12323455
+time: 1234382982
+realname: Jozef Chroustal
+
+dn: cn=Administrator,dc=example,dc=com
+objectClass: organizationalRole
+cn: Administrator
+phone: 12323445
+time: 1234382482
+realname: Jozef Chroustal

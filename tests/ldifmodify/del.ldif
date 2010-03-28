@@ -1,0 +1,3 @@
+dn: cn=salary2,CN=Administrator,DC=example,dc=com
+changetype: delete
+
