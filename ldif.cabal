@@ -1,5 +1,5 @@
 Name:            ldif
-Version:         0.0.5
+Version:         0.0.6
 License:         BSD3
 License-File:    LICENSE
 Synopsis:        The LDAP Data Interchange Format (LDIF) parser 
@@ -54,6 +54,7 @@ Library
                    filepath,
                    haskell98,
                    containers,
+                   cmdargs,
                    parsec       >= 2.1.0,
                    Cabal        >= 1.5 && < 1.9
   Hs-Source-Dirs:  src
@@ -74,6 +75,10 @@ Executable diffLDIF
 Executable ldif2html
   Hs-Source-Dirs:  src
   Main-Is:         ldif2html.hs
+
+Executable ldifmodify
+  Hs-Source-Dirs:  src
+  Main-Is:         ldifmodify.hs
 
 Executable test
   Hs-Source-Dirs:  src, tests
