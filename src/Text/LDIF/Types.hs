@@ -32,8 +32,8 @@ data LDIF = LDIFContent { lcVersion :: Maybe String, lcEntries :: [LDIFRecord] }
 
 -- | Represents one data record within LDIF file with DN and content
 -- | Represents one change record within LDIF file with DN and content
-data LDIFRecord = ContentRecord { coDN :: DN, coAttrVals :: [AttrValue] } 
-                | ChangeRecord  { chDN :: DN, chOp :: Change } deriving (Show, Eq)
+data LDIFRecord = ContentRecord { reDN :: DN, coAttrVals :: [AttrValue] } 
+                | ChangeRecord  { reDN :: DN, chOp :: Change } deriving (Show, Eq)
 
 -- | Represents one LDAP operation within changes LDIF
 data Change = ChangeAdd     { chAttrVals :: [AttrValue] }

@@ -73,5 +73,5 @@ doLDIF2HTML names outF = do
        xs  -> mapM_ print xs
 
 dns :: LDIF -> Set.Set String
-dns (LDIFContent _ xs) = Set.fromList $ nub $ map (dn2last . coDN) xs
-dns (LDIFChanges _ xs) = Set.fromList $ nub $ map (dn2last . chDN) xs
+dns (LDIFContent _ xs) = Set.fromList $ nub $ map (dn2last . reDN) xs
+dns (LDIFChanges _ xs) = Set.fromList $ nub $ map (dn2last . reDN) xs
