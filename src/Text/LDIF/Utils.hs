@@ -7,6 +7,8 @@ module Text.LDIF.Utils (
         takeDNPrefix,
         leafOfDN,
         rootOfDN,
+        lookupAttr,
+        filterAttr,
         isDummyRecord
 )
 where
@@ -27,6 +29,14 @@ findRecordByDN ldif dn = case findRecordsByDN ldif dn of
                                  []   -> Nothing
                                  xs   -> Just (head xs)
 
+
+-- | Find fist Attribute within attributes pairs list
+lookupAttr :: String -> [AttrValue] -> Maybe Value
+lookupAttr attr xs = lookup (Attribute attr) xs
+
+-- | Filter Attribute Value list according Attribute name
+filterAttr :: String -> [AttrValue] -> [AttrValue]
+filterAttr attr xs  = filter (\x -> (Attribute attr) == fst x) xs
 
 -- | Change record without any impact
 isDummyRecord :: LDIFRecord -> Bool
