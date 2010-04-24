@@ -16,10 +16,12 @@ applyLDIF dst@(LDIFContent _ _) (LDIFChanges _ xs) = foldr (applyRecord2LDIF) ds
 applyLDIF dst@(LDIFContent _ _) (LDIFContent _ xs) = foldr (applyRecord2LDIF) dst xs
 applyLDIF _ _ = error "Destination LDIF has to be Content LDIF and not Change LDIF"
 
+-- | Apply one LDIF Content/Change Record into LDIF and produce Changed LDIF
 applyRecord2LDIF :: LDIFRecord -> LDIF -> LDIF
 applyRecord2LDIF rec@(ContentRecord dn vals) dst = applyRecord2LDIF (ChangeRecord dn (ChangeAdd vals)) dst
 applyRecord2LDIF rec@(ChangeRecord  dn op)   dst = applyChange2Record op dn dst (findRecordByDN dst dn)
 
+-- | Apply one LDIF Change (add/del/modf) for given DN within LDIF Content 
 applyChange2Record :: Change -> DN -> LDIF -> Maybe LDIFRecord -> LDIF
 applyChange2Record (ChangeAdd vals)   dn (LDIFContent v xs) Nothing  = LDIFContent v (xs++[ContentRecord dn vals]) 
 applyChange2Record (ChangeAdd vals)   dn (LDIFContent v xs) (Just _) = error "already exists"
@@ -32,6 +34,7 @@ applyChange2Record (ChangeModify ops) dn (LDIFContent v xs) (Just r) = let pre  
                                                                        in LDIFContent v (pre++[rn]++post)
 applyChange2Record ChangeModDN      _ _ _  = error "Operation ModDN is not supported"
 
+-- | Apply Attribute Modification (Add/Del/Replace) to ContentRecord and produce changed ContentRecord
 applyMod2Record :: Modify -> LDIFRecord -> LDIFRecord
 applyMod2Record (ModAdd      name vals) (ContentRecord dn av) = let nav = map (\v -> (name,v)) vals  -- new attr/values
                                                                     mav = av ++ nav                  -- merged attr/values
