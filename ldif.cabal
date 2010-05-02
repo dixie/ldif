@@ -85,6 +85,6 @@ Executable ldifmodify
 Executable test
   Hs-Source-Dirs:  src, tests
   Main-Is:         TestMain.hs
-  Build-Depends:   base, HUnit
+  Build-Depends:   base, HUnit == 1.2.*
   if !flag(test)
     Buildable:     False
