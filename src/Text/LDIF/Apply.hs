@@ -14,6 +14,7 @@ import Data.List (nub)
 applyLDIF :: LDIF -> LDIF -> LDIF
 applyLDIF dst@(LDIFContent _ _) (LDIFChanges _ xs) = foldr (applyRecord2LDIF) dst xs
 applyLDIF dst@(LDIFContent _ _) (LDIFContent _ xs) = foldr (applyRecord2LDIF) dst xs
+applyLDIF dst@(LDIFMixed   _ _) (LDIFMixed   _ xs) = foldr (applyRecord2LDIF) dst xs
 applyLDIF _ _ = error "Destination LDIF has to be Content LDIF and not Change LDIF"
 
 -- | Apply one LDIF Content/Change Record into LDIF and produce Changed LDIF
