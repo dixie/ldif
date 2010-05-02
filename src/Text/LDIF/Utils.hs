@@ -9,13 +9,15 @@ module Text.LDIF.Utils (
         rootOfDN,
         lookupAttr,
         filterAttr,
-        isDummyRecord
+        isDummyRecord,
+        ldif2tree
 )
 where
 import Text.LDIF.Types
 import Text.LDIF.Printer
 import Data.Maybe
 import Data.Either
+import Data.Tree
 import Data.List (nub)
 
 -- | Find all Contents with given DN
@@ -64,3 +66,19 @@ isDNPrefixOf dn1 dn2 | (sizeOfDN dn1) >= (sizeOfDN dn2) = False
                      | otherwise = let n = (sizeOfDN dn2)
                                    in (takeDNPrefix dn1 n) == dn2
 
+dummyRootDN = DN [(Attribute "dc", "root")]
+
+ldif2tree :: LDIF -> Tree LDIFRecord
+ldif2tree (LDIFContent _ entries) = Node (ContentRecord dummyRootDN []) (ldifRecs2tree entries)
+ldif2tree (LDIFChanges _ entries) = Node (ChangeRecord dummyRootDN (ChangeAdd [])) (ldifRecs2tree entries)
+
+isParentRecordOf :: LDIFRecord -> LDIFRecord -> Bool
+isParentRecordOf a b = isDNPrefixOf (reDN a) (reDN b)
+
+ldifRoots xs = let isRoot x = all (\y -> not $ isParentRecordOf y x) xs
+               in filter (isRoot) xs
+
+ldifRecs2tree :: [LDIFRecord] -> [Tree LDIFRecord]
+ldifRecs2tree xs = let roots = (ldifRoots xs)
+                       subtr x = ldifRecs2tree $ filter (isParentRecordOf x) xs
+                   in map (\x -> Node x (subtr x)) roots
