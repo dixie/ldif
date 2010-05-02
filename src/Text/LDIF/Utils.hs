@@ -58,13 +58,13 @@ getDNValue :: DN -> Int -> AttrValue
 getDNValue (DN vals) idx = vals !! idx
 
 takeDNPrefix :: DN -> Int -> DN
-takeDNPrefix (DN vals) n = (DN (take n vals))
+takeDNPrefix (DN vals) n = (DN (reverse $ take n (reverse vals)))
 
 -- | Check if the dn1 is prefix of dn2
 isDNPrefixOf :: DN -> DN -> Bool
 isDNPrefixOf dn1 dn2 | (sizeOfDN dn1) >= (sizeOfDN dn2) = False
-                     | otherwise = let n = (sizeOfDN dn2)
-                                   in (takeDNPrefix dn1 n) == dn2
+                     | otherwise = let n = (sizeOfDN dn1)
+                                   in (takeDNPrefix dn2 n) == dn1
 
 dummyRootDN = DN [(Attribute "dc", "root")]
 
