@@ -3,10 +3,7 @@ module Text.LDIF.Apply (
 )
 where
 import Text.LDIF.Types
-import Text.LDIF.Printer
 import Text.LDIF.Utils
-import Data.Maybe
-import Data.Either
 import Data.List (nub)
 
 -- | Apply one LDIF to another LDIF. The destination LDIF has
@@ -19,8 +16,8 @@ applyLDIF _ _ = error "Destination LDIF has to be Content LDIF and not Change LD
 
 -- | Apply one LDIF Content/Change Record into LDIF and produce Changed LDIF
 applyRecord2LDIF :: LDIFRecord -> LDIF -> LDIF
-applyRecord2LDIF rec@(ContentRecord dn vals) dst = applyRecord2LDIF (ChangeRecord dn (ChangeAdd vals)) dst
-applyRecord2LDIF rec@(ChangeRecord  dn op)   dst = applyChange2Record op dn dst (findRecordByDN dst dn)
+applyRecord2LDIF (ContentRecord dn vals) dst = applyRecord2LDIF (ChangeRecord dn (ChangeAdd vals)) dst
+applyRecord2LDIF (ChangeRecord  dn op)   dst = applyChange2Record op dn dst (findRecordByDN dst dn)
 
 -- | Apply one LDIF Change (add/del/modf) for given DN within LDIF Content 
 applyChange2Record :: Change -> DN -> LDIF -> Maybe LDIFRecord -> LDIF
@@ -34,6 +31,7 @@ applyChange2Record (ChangeModify ops) dn (LDIFContent v xs) (Just r) = let pre  
                                                                            rn   = foldr applyMod2Record r ops
                                                                        in LDIFContent v (pre++[rn]++post)
 applyChange2Record ChangeModDN      _ _ _  = error "Operation ModDN is not supported"
+applyChange2Record _ _ _ _ = error $ "Unexpected LDIF Content"
 
 -- | Apply Attribute Modification (Add/Del/Replace) to ContentRecord and produce changed ContentRecord
 applyMod2Record :: Modify -> LDIFRecord -> LDIFRecord
@@ -51,5 +49,6 @@ applyMod2Record (ModDelete   name vals) (ContentRecord dn av) = let mav = filter
                                                                                else error ("ModDel: Attribute/Value not found: "++(show name)++"vals"++(show vals)++" DN:"++(show dn))
                                                                 in ContentRecord dn verified
 applyMod2Record (ModReplace  name vals) (ContentRecord dn av) = let nav = map (\v -> (name,v)) vals -- new attr/values
-                                                                    mav = (filter (\(n,v) -> n /= name) av) ++ nav -- merged
+                                                                    mav = (filter (\(n,_) -> n /= name) av) ++ nav -- merged
                                                                 in ContentRecord dn mav
+applyMod2Record _ x = error $ "Unexpected LDIF Record:" ++ (show x)
