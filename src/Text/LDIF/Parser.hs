@@ -61,7 +61,7 @@ takeLine (x:xs) = let isCont x = " " `isPrefixOf` x
 
 -- | Parsec ldif parser
 pLdif :: CharParser st LDIF
-pLdif = try pLdifChanges <|> try pLdifMixed <|> pLdifContent
+pLdif = try pLdifChanges <|> try pLdifMixed
 
 pLdifChanges :: CharParser st LDIF
 pLdifChanges = do
@@ -69,6 +69,7 @@ pLdifChanges = do
     ver <- optionMaybe pVersionSpec
     pSEPs
     recs <- sepEndBy1 pChangeRec pSEPs
+    eof
     return $ LDIFChanges ver recs
 
 pLdifMixed:: CharParser st LDIF
@@ -77,7 +78,8 @@ pLdifMixed = do
     ver <- optionMaybe pVersionSpec
     pSEPs
     recs <- sepEndBy1 pRec pSEPs
-    return $ LDIFMixed ver recs
+    eof
+    return $ LDIFContent ver recs
 
 pLdifContent :: CharParser st LDIF
 pLdifContent = do
@@ -85,6 +87,7 @@ pLdifContent = do
     ver <- optionMaybe pVersionSpec
     pSEPs
     recs <- sepEndBy1 pAttrValRec pSEPs
+    eof
     return $ LDIFContent ver recs
 
 pAttrValRec ::  CharParser st LDIFRecord

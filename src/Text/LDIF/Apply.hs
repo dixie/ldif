@@ -11,7 +11,6 @@ import Data.List (nub)
 applyLDIF :: LDIF -> LDIF -> LDIF
 applyLDIF dst@(LDIFContent _ _) (LDIFChanges _ xs) = foldr (applyRecord2LDIF) dst xs
 applyLDIF dst@(LDIFContent _ _) (LDIFContent _ xs) = foldr (applyRecord2LDIF) dst xs
-applyLDIF dst@(LDIFMixed   _ _) (LDIFMixed   _ xs) = foldr (applyRecord2LDIF) dst xs
 applyLDIF _ _ = error "Destination LDIF has to be Content LDIF and not Change LDIF"
 
 -- | Apply one LDIF Content/Change Record into LDIF and produce Changed LDIF
@@ -21,15 +20,15 @@ applyRecord2LDIF (ChangeRecord  dn op)   dst = applyChange2Record op dn dst (fin
 
 -- | Apply one LDIF Change (add/del/modf) for given DN within LDIF Content 
 applyChange2Record :: Change -> DN -> LDIF -> Maybe LDIFRecord -> LDIF
-applyChange2Record (ChangeAdd vals)   dn (LDIFContent v xs) Nothing  = LDIFContent v (xs++[ContentRecord dn vals]) 
-applyChange2Record (ChangeAdd vals)   dn (LDIFContent v xs) (Just _) = error ("ADD: Already exists: "++(show dn))
-applyChange2Record ChangeDelete       dn (LDIFContent v xs) (Just _) = let rn = filter (\x -> dn /= (reDN x)) xs
-                                                                       in LDIFContent v rn
-applyChange2Record ChangeDelete       dn (LDIFContent v xs) Nothing  = error ("DELETE: Entry not found: "++(show dn))
-applyChange2Record (ChangeModify ops) dn (LDIFContent v xs) (Just r) = let pre  = takeWhile (\x -> dn /= (reDN x)) xs
-                                                                           post = filter (\x -> dn /= (reDN x)) $ dropWhile (\x -> dn /= (reDN x)) xs
-                                                                           rn   = foldr applyMod2Record r ops
-                                                                       in LDIFContent v (pre++[rn]++post)
+applyChange2Record (ChangeAdd vals)   dn ld Nothing  = LDIFContent (lcVersion ld) ((lcEntries ld)++[ContentRecord dn vals]) 
+applyChange2Record (ChangeAdd _)      dn _  (Just _) = error ("ADD: Already exists: "++(show dn))
+applyChange2Record ChangeDelete       dn ld (Just _) = let rn = filter (\x -> dn /= (reDN x)) (lcEntries ld)
+                                                       in LDIFContent (lcVersion ld) rn
+applyChange2Record ChangeDelete       dn _  Nothing  = error ("DELETE: Entry not found: "++(show dn))
+applyChange2Record (ChangeModify ops) dn ld (Just r) = let pre  = takeWhile (\x -> dn /= (reDN x)) (lcEntries ld)
+                                                           post = filter (\x -> dn /= (reDN x)) $ dropWhile (\x -> dn /= (reDN x)) (lcEntries ld)
+                                                           rn   = foldr applyMod2Record r ops
+                                                       in LDIFContent (lcVersion ld) (pre++[rn]++post)
 applyChange2Record ChangeModDN      _ _ _  = error "Operation ModDN is not supported"
 applyChange2Record _ _ _ _ = error $ "Unexpected LDIF Content"
 
@@ -40,7 +39,7 @@ applyMod2Record (ModAdd      name vals) (ContentRecord dn av) = let nav = map (\
                                                                     verified = if (length $ nub mav) == (length mav) then mav
                                                                                else error ("ModAdd: Values already exists: "++(show av)++" vs "++(show vals)++" DN:"++(show dn))
                                                                     in ContentRecord dn verified
-applyMod2Record (ModDelete   name [])   (ContentRecord dn av) = let nav = filter (\(n,v) -> n /= name) av -- new attr/values
+applyMod2Record (ModDelete   name [])   (ContentRecord dn av) = let nav = filter (\(n,_) -> n /= name) av -- new attr/values
                                                                     verified = if (length $ nub nav) /= (length av) then nav
                                                                                else error ("ModDel: Attribute not found: "++(show name)++" DN:"++(show dn))
                                                                 in ContentRecord dn verified

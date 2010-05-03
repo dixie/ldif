@@ -24,7 +24,6 @@ import Data.List (nub)
 findRecordsByDN :: LDIF -> DN -> [LDIFRecord]
 findRecordsByDN (LDIFContent _ entries) dn = filter (\x -> (reDN x) == dn) entries
 findRecordsByDN (LDIFChanges _ entries) dn = filter (\x -> (reDN x) == dn) entries
-findRecordsByDN (LDIFMixed   _ entries) dn = filter (\x -> (reDN x) == dn) entries
 
 -- | Find first Content with given DN
 findRecordByDN :: LDIF -> DN -> Maybe LDIFRecord
@@ -72,7 +71,6 @@ dummyRootDN = DN [(Attribute "dc", "root")]
 ldif2tree :: LDIF -> Tree LDIFRecord
 ldif2tree (LDIFContent _ entries) = Node (ContentRecord dummyRootDN []) (ldifRecs2tree entries)
 ldif2tree (LDIFChanges _ entries) = Node (ChangeRecord dummyRootDN (ChangeAdd [])) (ldifRecs2tree entries)
-ldif2tree (LDIFMixed   _ entries) = Node (ChangeRecord dummyRootDN (ChangeAdd [])) (ldifRecs2tree entries)
 
 isParentRecordOf :: LDIFRecord -> LDIFRecord -> Bool
 isParentRecordOf a b = isDNPrefixOf (reDN a) (reDN b)
