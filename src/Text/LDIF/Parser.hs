@@ -227,7 +227,7 @@ pAttrValSpec = do
 
 pValueSpec :: CharParser st Value
 pValueSpec = try (char ':' >> char ':' >> pFILL >> pBase64String)
-         <|> try (char ':' >> pFILL >> pSafeString) 
+         <|> try (char ':' >> pFILL >> pSafeString') 
          <|> (char ':' >> char '<' >> pFILL >> pURL)
 
 pURL :: CharParser st String
@@ -238,6 +238,11 @@ pSafeString = do
    c <- noneOf "\n\r :<"
    r <- many (noneOf "\n\r")
    return $ c:r
+
+pSafeString' :: CharParser st String
+pSafeString' = do
+   r <- many (noneOf "\n\r")
+   return r
  
 pBase64String :: CharParser st String
 pBase64String = pSafeString
