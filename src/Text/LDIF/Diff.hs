@@ -19,7 +19,7 @@ import Data.List (nub)
 -- | 1. Iterate over L1 DN's and Modify / Remove Content 
 -- | 2. Iterate over L2 and Add Content not in L1
 diffLDIF :: LDIF -> LDIF -> Maybe LDIF
-diffLDIF l1@(LDIFContent _ c1) l2@(LDIFContent v2 c2) = Just (LDIFChanges v2 (changes ++ adds))
+diffLDIF l1@(LDIF _ c1) l2@(LDIF v2 c2) = Just (LDIF v2 (changes ++ adds))
    where 
       adds = map (content2add) $ filter (not . isEntryIn l1) c2
       changes = filter (not . isDummyRecord) $ foldl (processEntry) [] c1

@@ -45,9 +45,9 @@ assertParsedType name ldif | (isSuffixOf ".modify.ldif" name) = assertTypeChange
                            | (isSuffixOf ".content.ldif" name) = assertTypeContent name ldif
                            | otherwise = assertFailure $ "Unexpected filename: (not .modify.ldif or .content.ldif " ++ name
 
-assertTypeContent n l@(LDIFContent _ _) = assertBool "Valid Content Type" True -- >> (putStrLn $ "\n\n" ++ n ++ "\n\n" ++ (show l))
-assertTypeContent n x = assertFailure $ n ++ " is not type of LDIFContent"
+assertTypeContent n l  | (getLDIFType l == LDIFContentType) = assertBool "Valid Content Type" True -- >> (putStrLn $ "\n\n" ++ n ++ "\n\n" ++ (show l))
+                       | otherwise          = assertFailure $ n ++ " is not type of LDIFContent"
 
-assertTypeChanges n l@(LDIFChanges _ _) = assertBool "Valid Changes Type" True -- >> (putStrLn $ "\n\n" ++ n ++ "\n\n" ++ (show l))
-assertTypeChanges n x = assertFailure $ n ++ " is not type of LDIFChanges"
+assertTypeChanges n l | (getLDIFType l /= LDIFContentType) = assertBool "Valid Changes Type" True -- >> (putStrLn $ "\n\n" ++ n ++ "\n\n" ++ (show l))
+                      | otherwise          = assertFailure $ n ++ " is not type of LDIFChanges"
   

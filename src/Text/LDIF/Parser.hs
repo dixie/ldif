@@ -70,7 +70,7 @@ pLdifChanges = do
     pSEPs
     recs <- sepEndBy1 pChangeRec pSEPs
     eof
-    return $ LDIFChanges ver recs
+    return $ LDIF ver recs
 
 pLdifMixed:: CharParser st LDIF
 pLdifMixed = do
@@ -79,7 +79,7 @@ pLdifMixed = do
     pSEPs
     recs <- sepEndBy1 pRec pSEPs
     eof
-    return $ LDIFContent ver recs
+    return $ LDIF ver recs
 
 pLdifContent :: CharParser st LDIF
 pLdifContent = do
@@ -88,7 +88,7 @@ pLdifContent = do
     pSEPs
     recs <- sepEndBy1 pAttrValRec pSEPs
     eof
-    return $ LDIFContent ver recs
+    return $ LDIF ver recs
 
 pAttrValRec ::  CharParser st LDIFRecord
 pAttrValRec = do

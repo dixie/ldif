@@ -34,8 +34,7 @@ instance Show LDIFType where
 
 -- | Represents LDIF structure, it can be either simply LDIF data dump or
 -- | changes LDIF with LDAP operations 
-data LDIF = LDIFContent { lcVersion :: Maybe String, lcEntries :: [LDIFRecord] }
-          | LDIFChanges { lcVersion :: Maybe String, lcEntries :: [LDIFRecord] } deriving (Show, Eq)
+data LDIF = LDIF { lcVersion :: Maybe String, lcEntries :: [LDIFRecord] } deriving (Show, Eq)
 
 -- | Represents one data record within LDIF file with DN and content
 -- | Represents one change record within LDIF file with DN and content

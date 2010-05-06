@@ -10,7 +10,10 @@ module Text.LDIF.Utils (
         lookupAttr,
         filterAttr,
         isDummyRecord,
-        ldif2tree
+        ldif2tree,
+        getLDIFType,
+        isContentRecord,
+        isChangeRecord
 )
 where
 import Text.LDIF.Types
@@ -22,8 +25,7 @@ import Data.List (nub)
 
 -- | Find all Contents with given DN
 findRecordsByDN :: LDIF -> DN -> [LDIFRecord]
-findRecordsByDN (LDIFContent _ entries) dn = filter (\x -> (reDN x) == dn) entries
-findRecordsByDN (LDIFChanges _ entries) dn = filter (\x -> (reDN x) == dn) entries
+findRecordsByDN (LDIF _ entries) dn = filter (\x -> (reDN x) == dn) entries
 
 -- | Find first Content with given DN
 findRecordByDN :: LDIF -> DN -> Maybe LDIFRecord
@@ -69,8 +71,7 @@ isDNPrefixOf dn1 dn2 | (sizeOfDN dn1) >= (sizeOfDN dn2) = False
 dummyRootDN = DN [(Attribute "dc", "root")]
 
 ldif2tree :: LDIF -> Tree LDIFRecord
-ldif2tree (LDIFContent _ entries) = Node (ContentRecord dummyRootDN []) (ldifRecs2tree entries)
-ldif2tree (LDIFChanges _ entries) = Node (ChangeRecord dummyRootDN (ChangeAdd [])) (ldifRecs2tree entries)
+ldif2tree (LDIF _ entries) = Node (ChangeRecord dummyRootDN (ChangeAdd [])) (ldifRecs2tree entries)
 
 isParentRecordOf :: LDIFRecord -> LDIFRecord -> Bool
 isParentRecordOf a b = isDNPrefixOf (reDN a) (reDN b)
@@ -82,3 +83,21 @@ ldifRecs2tree :: [LDIFRecord] -> [Tree LDIFRecord]
 ldifRecs2tree xs = let roots = (ldifRoots xs)
                        subtr x = ldifRecs2tree $ filter (isParentRecordOf x) xs
                    in map (\x -> Node x (subtr x)) roots
+
+isContentRecord :: LDIFRecord -> Bool
+isContentRecord (ContentRecord _ _) = True
+isContentRecord _ = False
+
+isChangeRecord :: LDIFRecord -> Bool
+isChangeRecord (ChangeRecord _ _) = True
+isChangeRecord _ = False
+
+getLDIFType :: LDIF -> LDIFType
+getLDIFType (LDIF _ []) = LDIFContentType
+getLDIFType (LDIF _ xs) = getLDIFType' con chg
+    where
+      con = filter (isContentRecord) xs
+      chg = filter (not . isContentRecord) xs
+      getLDIFType' [] ys = LDIFChangesType
+      getLDIFType' zs [] = LDIFContentType
+      getLDIFType' zs ys = LDIFMixedType
