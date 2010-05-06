@@ -182,7 +182,8 @@ pAttrValueDN :: CharParser st Value
 pAttrValueDN = do
    many (noneOf stringChars)
    where 
-     specialChars = [',','=','+','<','>','#',';','\n','\r']
+     specialChars = [',','=','+','#',';','\n','\r']
+     -- specialChars = [',','=','+','<','>','#',';','\n','\r']
      stringChars  = '\\':'"':specialChars 
 
 pVersionSpec :: CharParser st String
