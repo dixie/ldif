@@ -12,5 +12,7 @@ main = do
   ml1 <- parseLDIFFile (args !! 0)
   ml2 <- parseLDIFFile (args !! 1)
   case rights [ml1,ml2] of 
-       [l1,l2] -> putStrLn $ ldif2str $ fromJust $ diffLDIF l1 l2  
+       [l1,l2] -> case diffLDIF l1 l2 of
+                    Left err -> putStrLn err
+                    Right delta -> putStrLn $ ldif2str delta
        _       -> print $ lefts [ml1,ml2] 
