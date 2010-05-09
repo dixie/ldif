@@ -5,10 +5,7 @@ module Text.LDIF.Diff (
 where
 import Text.LDIF.Types
 import Text.LDIF.Utils
-import Text.LDIF.Printer
 import Data.Maybe
-import Data.Either
-import Data.List (nub)
 
 -- | Create Change LDIF between to LDIF contents. If any
 -- | of input argument is not LDIFContent it returns Nothing. 
