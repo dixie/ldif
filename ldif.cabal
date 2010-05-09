@@ -82,6 +82,10 @@ Executable ldifmodify
   Hs-Source-Dirs:  src
   Main-Is:         ldifmodify.hs
 
+Executable ldifparse
+  Hs-Source-Dirs:  src
+  Main-Is:         ldifparse.hs
+
 Executable test
   Hs-Source-Dirs:  src, tests
   Main-Is:         TestMain.hs
