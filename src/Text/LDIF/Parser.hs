@@ -258,7 +258,7 @@ pLdapOid = do
    return (Attribute $ num ++ concat rest)
 
 pFILL :: CharParser st ()
-pFILL = spaces
+pFILL = skipMany (oneOf [' ', '\t'])
 
 pSEP :: CharParser st ()
 pSEP = try (char '\r' >> char '\n' >> return () )
