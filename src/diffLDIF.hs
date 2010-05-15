@@ -9,6 +9,8 @@ import System.Environment
 import Text.LDIF
 import System.Console.CmdArgs
 
+progDesc = "Create delta LDIF between Source LDIF and Target LDIF"
+
 data DiffLdif = DiffLdif { srcFile :: FilePath
                          , dstFile :: FilePath } deriving (Show, Data, Typeable)
 
@@ -16,12 +18,15 @@ defaultCfg = mode $ DiffLdif { srcFile = def &= typFile & flag "s" & text "Sourc
                              , dstFile = def &= typFile & flag "t" & text "Target LDIF File" }
 
 verifyCfg :: DiffLdif -> IO ()
-verifyCfg (DiffLdif [] _) = error "Missing Source LDIF File parameter (-s)"
-verifyCfg (DiffLdif _ []) = error "Missing Target LDIF File parameter (-t)"
-verifyCfg (DiffLdif _ _ ) = return ()
+verifyCfg (DiffLdif [] []) = do 
+  msg <- cmdArgsHelp progDesc [defaultCfg] Text
+  error msg
+verifyCfg (DiffLdif [] _)  = error "Missing Source LDIF File parameter (-s)"
+verifyCfg (DiffLdif _ [])  = error "Missing Target LDIF File parameter (-t)"
+verifyCfg (DiffLdif _ _ )  = return ()
 
 main = do
-  cfg <- cmdArgs "LDIF Diff. Create delta LDIF between Source LDIF and Target LDIF" [defaultCfg]
+  cfg <- cmdArgs progDesc [defaultCfg]
   verifyCfg cfg
   ml1 <- parseLDIFFile (srcFile cfg)
   ml2 <- parseLDIFFile (dstFile cfg)
