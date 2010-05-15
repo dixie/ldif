@@ -23,13 +23,13 @@ applyChange2Record (ChangeAdd vals)   dn ld Nothing  = LDIF (lcVersion ld) ((lcE
 applyChange2Record (ChangeAdd _)      dn _  (Just _) = error ("ADD: Already exists: "++(dn2str dn))
 applyChange2Record ChangeDelete       dn ld (Just _) = LDIF (lcVersion ld) (filter (\x -> dn /= (reDN x)) (lcEntries ld))
 applyChange2Record ChangeDelete       dn _  Nothing  = error ("DELETE: Entry not found: "++(dn2str dn))
-applyChange2Record (ChangeModify _)   dn ld Nothing  = error ("MODIFY: Entry not found: "++(dn2str dn))
+applyChange2Record (ChangeModify _)   dn _  Nothing  = error ("MODIFY: Entry not found: "++(dn2str dn))
 applyChange2Record (ChangeModify ops) dn ld (Just r) = let pre  = takeWhile (\x -> dn /= (reDN x)) (lcEntries ld)
                                                            post = filter (\x -> dn /= (reDN x)) $ dropWhile (\x -> dn /= (reDN x)) (lcEntries ld)
                                                            rn   = foldr applyMod2Record r ops
                                                        in LDIF (lcVersion ld) (pre++[rn]++post)
 applyChange2Record ChangeModDN      _ _ _  = error "ModDN: Operation is not supported yet."
-applyChange2Record x _ y _                 = error $ "Unexpected LDIF Content: " ++ (show x) ++ (show y)
+--applyChange2Record x _ y _                 = error $ "Unexpected LDIF Content: " ++ (show x) ++ (show y)
 
 -- | Apply Attribute Modification (Add/Del/Replace) to ContentRecord and produce changed ContentRecord
 applyMod2Record :: Modify -> LDIFRecord -> LDIFRecord

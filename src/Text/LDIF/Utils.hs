@@ -17,11 +17,7 @@ module Text.LDIF.Utils (
 )
 where
 import Text.LDIF.Types
-import Text.LDIF.Printer
-import Data.Maybe
-import Data.Either
 import Data.Tree
-import Data.List (nub)
 
 -- | Find all Contents with given DN
 findRecordsByDN :: LDIF -> DN -> [LDIFRecord]
@@ -68,6 +64,7 @@ isDNPrefixOf dn1 dn2 | (sizeOfDN dn1) >= (sizeOfDN dn2) = False
                      | otherwise = let n = (sizeOfDN dn1)
                                    in (takeDNPrefix dn2 n) == dn1
 
+dummyRootDN :: DN
 dummyRootDN = DN [(Attribute "dc", "root")]
 
 ldif2tree :: LDIF -> Tree LDIFRecord
@@ -76,6 +73,7 @@ ldif2tree (LDIF _ entries) = Node (ChangeRecord dummyRootDN (ChangeAdd [])) (ldi
 isParentRecordOf :: LDIFRecord -> LDIFRecord -> Bool
 isParentRecordOf a b = isDNPrefixOf (reDN a) (reDN b)
 
+ldifRoots :: [LDIFRecord] -> [LDIFRecord]
 ldifRoots xs = let isRoot x = all (\y -> not $ isParentRecordOf y x) xs
                in filter (isRoot) xs
 
@@ -98,6 +96,7 @@ getLDIFType (LDIF _ xs) = getLDIFType' con chg
     where
       con = filter (isContentRecord) xs
       chg = filter (not . isContentRecord) xs
-      getLDIFType' [] ys = LDIFChangesType
-      getLDIFType' zs [] = LDIFContentType
-      getLDIFType' zs ys = LDIFMixedType
+      getLDIFType' [] [] = error "Unexpected"
+      getLDIFType' [] _  = LDIFChangesType
+      getLDIFType' _  [] = LDIFContentType
+      getLDIFType' _  _  = LDIFMixedType
