@@ -17,8 +17,11 @@ Description:
  .
  - diffLDIF command generates change LDIF between two 
    content LDIF files.
+ .
  - ldif2html command generates hypertext HTML browsable
    LDIF file. 
+ .
+ - ldifmodify commmand apply change LDIF on contenct LDIF
  .
 Category:        Text
 Stability:       experimental
