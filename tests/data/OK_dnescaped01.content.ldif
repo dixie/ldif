@@ -18,6 +18,7 @@ dn: SN=Lu\C4\8Di\C4\8
 objectClass: organizationalRole
 cn: The Postmaster
 
-dn: test=#04024869,O=Test,C=GB
-objectClass: organizationalRole
-cn: The Postmaster
+# not supported yet
+#dn: test=#04024869,O=Test,C=GB
+#objectClass: organizationalRole
+#cn: The Postmaster
