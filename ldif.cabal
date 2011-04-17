@@ -52,14 +52,12 @@ flag test
   default:     False
 
 Library
-  Build-Depends:   ghc,
-                   base         < 5,
+  Build-Depends:   base         < 5,
                    filepath,
                    containers,
                    cmdargs      >= 0.2,
                    directory,
-                   parsec       >= 2.1.0,
-                   Cabal        >= 1.4
+                   parsec       >= 2.1.0
   Hs-Source-Dirs:  src
   Extensions:      CPP, PatternGuards
   Ghc-Options:      -Wall -fno-warn-orphans
