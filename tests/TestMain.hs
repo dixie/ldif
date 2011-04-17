@@ -12,7 +12,7 @@ main = do
     ls <- getLDIFs ldifDir
     runTestTT (tests ls)
 
-tests ls = TestList $ (testCasesParseOK ls) ++ testCasesDIFF ++ testCasesUtils
+tests ls = TestList $ (testCasesParseOK ls) ++ testCasesDIFF ++ testCasesUtils ++ (testCasesPrintOK ls)
 
 --
 -- Test Cases
@@ -22,12 +22,17 @@ testCasesParseOK ls = map (\x -> TestCase (checkParsing x)) $ filter (isOK) ls
     where
       checkParsing fname = do
         ret <- parseLDIFFile fname
-        assertParsedOK fname ret
+        assertParsedOK fname ret "Parsing test"
+
+testCasesPrintOK ls = map (\x -> TestCase (checkParsing x)) $ filter (isOK) ls
+    where
+      checkParsing fname = do
+        ret <- parseLDIFFile fname
         case ret of 
           Left _     -> return ()
           Right ldif -> do
               let ret2 = parseLDIFStr (ldif2str ldif)
-              assertParsedOK fname ret2
+              assertParsedOK fname ret2 "Printing test"
 
 testCasesUtils = [ TestCase (assertBool "DN1Root is Prefix of DN2Root" (not $ isDNPrefixOf dn1root dn2root))
                  , TestCase (assertBool "DN1Root is Prefix of DN1Child" (isDNPrefixOf dn1root dn1child))
@@ -47,8 +52,8 @@ getLDIFs dr = do
 isOK x = isPrefixOf "OK" (takeFileName x)
 isLDIF x = isSuffixOf ".ldif" x
 
-assertParsedOK filename ret = case ret of
-  Left e -> assertFailure (show e)
+assertParsedOK filename ret msg  = case ret of
+  Left e -> assertFailure $ msg ++ " " ++ (show e)
   Right ldif -> assertParsedType filename ldif
 
 assertParsedType name ldif | (isSuffixOf ".modify.ldif" name) = assertTypeChanges name ldif
