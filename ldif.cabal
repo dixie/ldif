@@ -42,6 +42,7 @@ Extra-Source-Files:
     tests/data/OK_simple03.modify.ldif
     tests/data/OK_simpleComment.modify.ldif
     tests/data/OK_simpleWrap.modify.ldif
+    tests/data/OK_dnescaped01.content.ldif
     
 Source-Repository head
   type:     darcs
