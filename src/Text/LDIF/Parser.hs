@@ -40,15 +40,15 @@ parseDNStr = parse pDN "(param)"
 
 -- | Preprocessing for concat wrapped lines and remove comment lines
 preproc :: String -> String
-preproc = stripComments . unwrap
+preproc xs = unlines $ stripComments $ unwrap $ lines xs
 
 -- | Remove Comment Lines
-stripComments :: String -> String
-stripComments input = unlines $ filter (not . isPrefixOf "#") $ lines input
+stripComments :: [String] -> [String]
+stripComments input = filter (not . isPrefixOf "#") input
 
 -- | Unwrap lines, lines with space at begin is continue of previous line 
-unwrap :: String -> String
-unwrap xs = unlines $ takeLines $ lines xs
+unwrap :: [String] -> [String]
+unwrap xs = takeLines xs
 
 takeLines :: [String] -> [String]
 takeLines [] = []
