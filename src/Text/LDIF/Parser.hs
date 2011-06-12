@@ -63,7 +63,7 @@ takeLine (x:xs) = let isCont z = " " `isPrefixOf` z
 
 -- | Parsec ldif parser
 pLdif :: CharParser st LDIF
-pLdif = try pLdifChanges <|> try pLdifMixed
+pLdif = try pLdifChanges <|> pLdifMixed
 
 pLdifChanges :: CharParser st LDIF
 pLdifChanges = do
