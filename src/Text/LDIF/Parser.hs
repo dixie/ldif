@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns, OverloadedStrings #-}
+
 module Text.LDIF.Parser (
 	parseLDIFStr,
         parseLDIFStrAs,
@@ -5,67 +7,72 @@ module Text.LDIF.Parser (
         parseDNStr
 )
 where
+import Prelude as P
 import Text.LDIF.Types
 import Text.LDIF.Consts
-import Text.ParserCombinators.Parsec
+import Text.Parsec as PR
+import Text.Parsec.ByteString.Lazy
+import Text.Parsec.Char
+import qualified Data.ByteString.Lazy as B
+import Data.ByteString.Lazy.Char8 as BC
 import Data.Char
 import Data.List (isPrefixOf)
 import Numeric (readHex)
 
 -- | Parse string as LDIF content and return LDIF or ParseError
-parseLDIFStr :: String -> Either ParseError LDIF
+parseLDIFStr :: B.ByteString -> Either ParseError LDIF
 parseLDIFStr = parseLDIFStrAs Nothing 
 
 -- | Read and parse provided file and return LDIF or ParseError
 parseLDIFFile :: String -> IO (Either ParseError LDIF)
 parseLDIFFile name = do
-	input <- readFile name
+	input <- B.readFile name
         return $ parseLDIFStrAs' name Nothing input
 
 -- | Read and parse provided string and return LDIF or ParserError
 -- | If LDIF type is specified than given type is expected for parsing 
 -- | and mismatch generates ParseError
-parseLDIFStrAs' :: String -> Maybe LDIFType -> String -> Either ParseError LDIF
-parseLDIFStrAs' nm Nothing                = parse pLdif        nm . preproc
-parseLDIFStrAs' nm (Just LDIFMixedType)   = parse pLdif        nm . preproc
-parseLDIFStrAs' nm (Just LDIFContentType) = parse pLdifContent nm . preproc
-parseLDIFStrAs' nm (Just LDIFChangesType) = parse pLdifChanges nm . preproc
+parseLDIFStrAs' :: String -> Maybe LDIFType -> B.ByteString -> Either ParseError LDIF
+parseLDIFStrAs' nm Nothing                xs = parse pLdif        nm $ preproc xs
+parseLDIFStrAs' nm (Just LDIFMixedType)   xs = parse pLdif        nm $ preproc xs
+parseLDIFStrAs' nm (Just LDIFContentType) xs = parse pLdifContent nm $ preproc xs
+parseLDIFStrAs' nm (Just LDIFChangesType) xs = parse pLdifChanges nm $ preproc xs
 
-parseLDIFStrAs :: Maybe LDIFType -> String -> Either ParseError LDIF
+parseLDIFStrAs :: Maybe LDIFType -> B.ByteString -> Either ParseError LDIF
 parseLDIFStrAs = parseLDIFStrAs' "(param)"
 
 -- | Parse string as DN and return DN type or ParseError
-parseDNStr :: String -> Either ParseError DN
+parseDNStr :: B.ByteString -> Either ParseError DN
 parseDNStr = parse pDN "(param)" 
 
 -- | Preprocessing for concat wrapped lines and remove comment lines
-preproc :: String -> String
-preproc xs = unlines $ stripComments $ unwrap $ lines xs
+preproc :: B.ByteString -> B.ByteString
+preproc xs = BC.unlines $ stripComments $ unwrap $ BC.lines xs
 
 -- | Remove Comment Lines
-stripComments :: [String] -> [String]
-stripComments input = filter (not . isPrefixOf "#") input
+stripComments :: [B.ByteString] -> [B.ByteString]
+stripComments input = P.filter (not . BC.isPrefixOf "#") input
 
 -- | Unwrap lines, lines with space at begin is continue of previous line 
-unwrap :: [String] -> [String]
+unwrap :: [B.ByteString] -> [B.ByteString]
 unwrap xs = takeLines xs
 
-takeLines :: [String] -> [String]
+takeLines :: [B.ByteString] -> [B.ByteString]
 takeLines [] = []
 takeLines xs = let (ln,ys) = takeLine xs
                in ln:takeLines ys
 
-takeLine :: [String] -> (String, [String])
-takeLine []     = ([],[])
+takeLine :: [B.ByteString] -> (B.ByteString, [B.ByteString])
+takeLine []  = (B.empty,[])
 takeLine (x:[]) = (x,[])
-takeLine (x:xs) = let isCont z = " " `isPrefixOf` z
-                  in (x ++ (concat $ map (tail) $ takeWhile (isCont) xs), dropWhile (isCont) xs) 
+takeLine (x:xs) = let isCont z = " " `BC.isPrefixOf` z
+                  in (x `B.append` (B.concat $ P.map (BC.tail) $ P.takeWhile (isCont) xs), P.dropWhile (isCont) xs) 
 
 -- | Parsec ldif parser
 pLdif :: CharParser st LDIF
 pLdif = try pLdifChanges <|> pLdifMixed
 
-pLdifChanges :: CharParser st LDIF
+pLdifChanges :: Parser LDIF
 pLdifChanges = do
     pSEPs
     ver <- optionMaybe pVersionSpec
@@ -74,7 +81,7 @@ pLdifChanges = do
     eof
     return $ LDIF ver recs
 
-pLdifMixed:: CharParser st LDIF
+pLdifMixed:: Parser LDIF
 pLdifMixed = do
     pSEPs
     ver <- optionMaybe pVersionSpec
@@ -83,7 +90,7 @@ pLdifMixed = do
     eof
     return $ LDIF ver recs
 
-pLdifContent :: CharParser st LDIF
+pLdifContent :: Parser LDIF
 pLdifContent = do
     pSEPs
     ver <- optionMaybe pVersionSpec
@@ -92,23 +99,23 @@ pLdifContent = do
     eof
     return $ LDIF ver recs
 
-pAttrValRec ::  CharParser st LDIFRecord
+pAttrValRec ::  Parser LDIFRecord
 pAttrValRec = do
     dn <- pDNSpec
     pSEP
     attrVals <- sepEndBy1 pAttrValSpec pSEP
     return $ ContentRecord dn attrVals
 
-pRec :: CharParser st LDIFRecord
+pRec :: Parser LDIFRecord
 pRec = try pChangeRec <|> pAttrValRec
 
-pChangeRec :: CharParser st LDIFRecord
+pChangeRec :: Parser LDIFRecord
 pChangeRec = try pChangeAdd
          <|> try pChangeDel
          <|> try pChangeMod
          <|> pChangeModDN
 
-pChangeAdd :: CharParser st LDIFRecord
+pChangeAdd :: Parser LDIFRecord
 pChangeAdd = do
     dn <- pDNSpec
     pSEP
@@ -119,7 +126,7 @@ pChangeAdd = do
     vals <- sepEndBy1 pAttrValSpec pSEP
     return $ ChangeRecord dn (ChangeAdd vals)
 
-pChangeDel :: CharParser st LDIFRecord
+pChangeDel :: Parser LDIFRecord
 pChangeDel = do
     dn <- pDNSpec
     pSEP
@@ -129,7 +136,7 @@ pChangeDel = do
     pSEP
     return $ ChangeRecord dn ChangeDelete
 
-pChangeMod :: CharParser st LDIFRecord
+pChangeMod :: Parser LDIFRecord
 pChangeMod = do
     dn <- pDNSpec
     pSEP
@@ -140,7 +147,7 @@ pChangeMod = do
     mods <- sepEndBy1 pModSpec (char '-' >> pSEP)
     return $ ChangeRecord dn (ChangeModify mods)
 
-pChangeModDN :: CharParser st LDIFRecord
+pChangeModDN :: Parser LDIFRecord
 pChangeModDN = do
     dn <- pDNSpec
     pSEP
@@ -158,21 +165,21 @@ pChangeModDN = do
     pSEP
     return $ ChangeRecord dn ChangeModDN
 
-pRDN :: CharParser st String
+pRDN :: Parser B.ByteString
 pRDN = pSafeString
 
-pDNSpec :: CharParser st DN
+pDNSpec :: Parser DN
 pDNSpec = do
     _ <- string "dn:"
     pDN
 
-pDN :: CharParser st DN
+pDN :: Parser DN
 pDN = do
    pFILL
    avals <- sepEndBy pAttrEqValue (char ',')  
    return $ DN avals
 
-pAttrEqValue :: CharParser st AttrValue
+pAttrEqValue :: Parser AttrValue
 pAttrEqValue = do
    pFILL
    att <- pAttributeType
@@ -180,28 +187,32 @@ pAttrEqValue = do
    val <- pAttrValueDN
    return (att,val)
 
-pAttrValueDN :: CharParser st Value
+pAttrValueDN :: Parser Value
 pAttrValueDN = do
-   many allChar
+   xs <- many allChar
+   return $ BC.pack xs
    where 
-     allChar = try (escChar) <|> try (hexChar) <|> (noneOf (escapedDNChars ++ "\n\r"))
+     allChar = try (escChar) 
+               <|> try (hexChar) 
+               <|> (noneOf (escapedDNChars ++ "\n\r"))
      escChar = do
        _ <- char '\\'
        oneOf escapedDNChars
      hexChar = do
        _ <- char '\\'
-       hval <- count 2 hexDigit
+       hval <- PR.count 2 hexDigit
        case readHex hval of
          [(val,[])] -> return $ chr val
          _          -> fail $ "invalid hex value: " ++ hval
 
-pVersionSpec :: CharParser st String
+pVersionSpec :: Parser B.ByteString
 pVersionSpec = do
    _ <- string "version:"
    pFILL
-   many1 digit
+   xs <- many1 digit
+   return $ BC.pack xs
 
-pModSpec :: CharParser st Modify
+pModSpec :: Parser Modify
 pModSpec = do
    modType <- pModType
    pFILL
@@ -211,68 +222,70 @@ pModSpec = do
    return $ mkMod modType att vals
 
 mkMod :: String -> Attribute -> [AttrValue] -> Modify
-mkMod modType att vals | modType == "add:" = ModAdd att (map (snd) vals)
-                       | modType == "delete:" = ModDelete att (map (snd) vals)
-                       | modType == "replace:" = ModReplace att (map (snd) vals)
-                       | otherwise = error $ "unexpected mod:" ++ modType 
+mkMod modType att vals | modType == "add:" = ModAdd att (P.map (snd) vals)
+                       | modType == "delete:" = ModDelete att (P.map (snd) vals)
+                       | modType == "replace:" = ModReplace att (P.map (snd) vals)
+                       | otherwise = error $ "unexpected mod:" ++ modType
                          -- error can not be reached because pModType
 
-pModType :: CharParser st String
+pModType :: Parser String
 pModType = try (string "add:")
        <|> try (string "delete:")
        <|> string "replace:"
 
-pAttributeDescription :: CharParser st Attribute
+pAttributeDescription :: Parser Attribute
 pAttributeDescription = pAttributeType
 
-pAttributeType :: CharParser st Attribute
+pAttributeType :: Parser Attribute
 pAttributeType = try pLdapOid
-             <|> (do { l <- letter; o <- pAttrTypeChars; return (Attribute $ l:o) } )
+             <|> (do { l <- letter; o <- pAttrTypeChars; return (Attribute $ l `BC.cons` o) } )
 
-pAttrValSpec :: CharParser st AttrValue
+pAttrValSpec :: Parser AttrValue
 pAttrValSpec = do
    name <- pAttributeDescription
    val  <- pValueSpec
    return (name, val)
 
-pValueSpec :: CharParser st Value
+pValueSpec :: Parser Value
 pValueSpec = try (char ':' >> char ':' >> pFILL >> pBase64String)
          <|> try (char ':' >> pFILL >> pSafeString') 
          <|> (char ':' >> char '<' >> pFILL >> pURL)
 
-pURL :: CharParser st String
+pURL :: Parser B.ByteString
 pURL = pSafeString
 
-pSafeString :: CharParser st String
+pSafeString :: Parser B.ByteString
 pSafeString = do
    c <- noneOf "\n\r :<"
    r <- many (noneOf "\n\r")
-   return $ c:r
+   return $ BC.pack $ c:r
 
-pSafeString' :: CharParser st String
+pSafeString' :: Parser B.ByteString
 pSafeString' = do
    r <- many (noneOf "\n\r")
-   return r
+   return $ BC.pack r
  
-pBase64String :: CharParser st String
+pBase64String :: Parser B.ByteString
 pBase64String = pSafeString
 
-pAttrTypeChars :: CharParser st String
-pAttrTypeChars = many (satisfy (\x -> isAlphaNum x || x == '-'))
+pAttrTypeChars :: Parser B.ByteString
+pAttrTypeChars = do 
+  xs <- many (satisfy (\x -> isAlphaNum x || x == '-'))
+  return $ BC.pack xs
 
-pLdapOid :: CharParser st Attribute
+pLdapOid :: Parser Attribute
 pLdapOid = do
    num <- many1 digit
    rest <- many (do { _ <- string "."; n <- many1 digit; return $ '.':n})
-   return (Attribute $ num ++ concat rest)
+   return (Attribute $ BC.pack $ num ++ P.concat rest)
 
-pFILL :: CharParser st ()
+pFILL :: Parser ()
 pFILL = skipMany (oneOf [' ', '\t'])
 
-pSEP :: CharParser st ()
+pSEP :: Parser ()
 pSEP = try (char '\r' >> char '\n' >> return () )
    <|> (char '\n' >> return () )
 
-pSEPs :: CharParser st ()
+pSEPs :: Parser ()
 pSEPs = many pSEP >> return ()
 

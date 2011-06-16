@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns, OverloadedStrings #-}
+
 -- | LDIF related operations
 module Text.LDIF.Utils (
         findRecordsByDN,
@@ -18,27 +20,30 @@ module Text.LDIF.Utils (
         ldif2ldifI
 )
 where
+import Prelude as P
 import Text.LDIF.Types
 import Data.Tree
+import Data.ByteString.Lazy as B
+import Data.ByteString.Lazy.Char8 as BC
 
 -- | Find all Contents with given DN
 findRecordsByDN :: LDIF -> DN -> [LDIFRecord]
-findRecordsByDN (LDIF _ entries) dn = filter (\x -> (reDN x) == dn) entries
+findRecordsByDN (LDIF _ entries) dn = P.filter (\x -> (reDN x) == dn) entries
 
 -- | Find first Content with given DN
 findRecordByDN :: LDIF -> DN -> Maybe LDIFRecord
 findRecordByDN ldif dn = case findRecordsByDN ldif dn of
                                  []   -> Nothing
-                                 xs   -> Just (head xs)
+                                 xs   -> Just (P.head xs)
 
 
 -- | Find fist Attribute within attributes pairs list
-lookupAttr :: String -> [AttrValue] -> Maybe Value
+lookupAttr :: ByteString -> [AttrValue] -> Maybe Value
 lookupAttr attr xs = lookup (Attribute attr) xs
 
 -- | Filter Attribute Value list according Attribute name
-filterAttr :: String -> [AttrValue] -> [AttrValue]
-filterAttr attr xs  = filter (\x -> (Attribute attr) == fst x) xs
+filterAttr :: ByteString -> [AttrValue] -> [AttrValue]
+filterAttr attr xs  = P.filter (\x -> (Attribute attr) == fst x) xs
 
 -- | Change record without any impact
 isDummyRecord :: LDIFRecord -> Bool
@@ -52,14 +57,14 @@ rootOfDN :: DN -> AttrValue
 rootOfDN xs = getDNValue xs ((sizeOfDN xs)-1)
 
 sizeOfDN :: DN -> Int
-sizeOfDN xs = length (dnAttrVals xs)
+sizeOfDN xs = P.length (dnAttrVals xs)
 
 getDNValue :: DN -> Int -> AttrValue
 getDNValue xs idx = (dnAttrVals xs) !! idx
 
 takeDNPrefix :: DN -> Int -> DN
-takeDNPrefix (DN vals) n  = (DN (reverse $ take n (reverse vals)))
-takeDNPrefix (DNi vals) n = (DNi (reverse $ take n (reverse vals)))
+takeDNPrefix (DN vals) n  = (DN (P.reverse $ P.take n (P.reverse vals)))
+takeDNPrefix (DNi vals) n = (DNi (P.reverse $ P.take n (P.reverse vals)))
 
 -- | Check if the dn1 is prefix of dn2
 isDNPrefixOf :: DN -> DN -> Bool
@@ -77,13 +82,13 @@ isParentRecordOf :: LDIFRecord -> LDIFRecord -> Bool
 isParentRecordOf a b = isDNPrefixOf (reDN a) (reDN b)
 
 ldifRoots :: [LDIFRecord] -> [LDIFRecord]
-ldifRoots xs = let isRoot x = all (\y -> not $ isParentRecordOf y x) xs
-               in filter (isRoot) xs
+ldifRoots xs = let isRoot x = P.all (\y -> not $ isParentRecordOf y x) xs
+               in P.filter (isRoot) xs
 
 ldifRecs2tree :: [LDIFRecord] -> [Tree LDIFRecord]
 ldifRecs2tree xs = let roots = (ldifRoots xs)
-                       subtr x = ldifRecs2tree $ filter (isParentRecordOf x) xs
-                   in map (\x -> Node x (subtr x)) roots
+                       subtr x = ldifRecs2tree $ P.filter (isParentRecordOf x) xs
+                   in P.map (\x -> Node x (subtr x)) roots
 
 isContentRecord :: LDIFRecord -> Bool
 isContentRecord (ContentRecord _ _) = True
@@ -97,8 +102,8 @@ getLDIFType :: LDIF -> LDIFType
 getLDIFType (LDIF _ []) = LDIFContentType
 getLDIFType (LDIF _ xs) = getLDIFType' con chg
     where
-      con = filter (isContentRecord) xs
-      chg = filter (not . isContentRecord) xs
+      con = P.filter (isContentRecord) xs
+      chg = P.filter (not . isContentRecord) xs
       getLDIFType' [] [] = error "Unexpected"
       getLDIFType' [] _  = LDIFChangesType
       getLDIFType' _  [] = LDIFContentType
@@ -111,4 +116,4 @@ dn2dnI xs = xs
 ldif2ldifI :: LDIF -> LDIF
 ldif2ldifI (LDIF v xs) = LDIF v ys
     where
-      ys = map (\x -> x { reDN = dn2dnI (reDN x) } )  xs
+      ys = P.map (\x -> x { reDN = dn2dnI (reDN x) } )  xs

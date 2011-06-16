@@ -55,10 +55,11 @@ flag test
 Library
   Build-Depends:   base         < 5,
                    filepath,
+                   bytestring,
                    containers,
                    cmdargs      >= 0.2,
                    directory,
-                   parsec       >= 2.1.0
+                   parsec       >= 3.1.0
   Hs-Source-Dirs:  src
   Extensions:      CPP, PatternGuards
   Ghc-Options:      -Wall -fno-warn-orphans
