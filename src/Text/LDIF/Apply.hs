@@ -4,7 +4,7 @@ module Text.LDIF.Apply (
         applyLDIF
 )
 where
-import Prelude as P 
+import Prelude
 import Text.LDIF.Types
 import Text.LDIF.Utils
 import Text.LDIF.Printer

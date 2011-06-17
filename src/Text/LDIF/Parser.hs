@@ -7,13 +7,13 @@ module Text.LDIF.Parser (
         parseDNStr
 )
 where
-import Prelude as P
+import Prelude
 import Text.LDIF.Types
 import Text.LDIF.Consts
 import Text.Parsec as PR
 import Text.Parsec.ByteString.Lazy
 import Text.Parsec.Char
-import Data.ByteString.Lazy.Char8 as BC
+import qualified Data.ByteString.Lazy.Char8 as BC
 import Data.Char
 import Data.List (isPrefixOf)
 import Numeric (readHex)
@@ -50,7 +50,7 @@ preproc xs = BC.unlines $ stripComments $ unwrap $ BC.lines xs
 
 -- | Remove Comment Lines
 stripComments :: [BC.ByteString] -> [BC.ByteString]
-stripComments input = P.filter (not . BC.isPrefixOf "#") input
+stripComments input = filter (not . BC.isPrefixOf "#") input
 
 -- | Unwrap lines, lines with space at begin is continue of previous line 
 unwrap :: [BC.ByteString] -> [BC.ByteString]
@@ -65,7 +65,7 @@ takeLine :: [BC.ByteString] -> (BC.ByteString, [BC.ByteString])
 takeLine []  = (BC.empty,[])
 takeLine (x:[]) = (x,[])
 takeLine (x:xs) = let isCont z = " " `BC.isPrefixOf` z
-                  in (x `BC.append` (BC.concat $ P.map (BC.tail) $ P.takeWhile (isCont) xs), P.dropWhile (isCont) xs) 
+                  in (x `BC.append` (BC.concat $ map (BC.tail) $ takeWhile (isCont) xs), dropWhile (isCont) xs) 
 
 -- | Parsec ldif parser
 pLdif :: CharParser st LDIF
@@ -223,9 +223,9 @@ pModSpec = do
    return $ mkMod modType att vals
 
 mkMod :: String -> Attribute -> [AttrValue] -> Modify
-mkMod modType att vals | modType == "add:" = ModAdd att (P.map (snd) vals)
-                       | modType == "delete:" = ModDelete att (P.map (snd) vals)
-                       | modType == "replace:" = ModReplace att (P.map (snd) vals)
+mkMod modType att vals | modType == "add:" = ModAdd att (map (snd) vals)
+                       | modType == "delete:" = ModDelete att (map (snd) vals)
+                       | modType == "replace:" = ModReplace att (map (snd) vals)
                        | otherwise = error $ "unexpected mod:" ++ modType
                          -- error can not be reached because pModType
 
@@ -282,7 +282,7 @@ pLdapOid :: Parser Attribute
 pLdapOid = do
    num <- many1 digit
    rest <- many (do { _ <- string "."; n <- many1 digit; return $ '.':n})
-   return (Attribute $ BC.pack $ num ++ P.concat rest)
+   return (Attribute $ BC.pack $ num ++ concat rest)
 
 pFILL :: Parser ()
 pFILL = skipMany (oneOf [' ', '\t'])
