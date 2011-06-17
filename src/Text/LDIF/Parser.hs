@@ -68,7 +68,7 @@ takeLine (x:xs) = let isCont z = " " `BC.isPrefixOf` z
                   in (x `BC.append` (BC.concat $ map (BC.tail) $ takeWhile (isCont) xs), dropWhile (isCont) xs) 
 
 -- | Parsec ldif parser
-pLdif :: CharParser st LDIF
+pLdif :: Parser LDIF
 pLdif = try pLdifChanges <|> pLdifMixed
 
 pLdifChanges :: Parser LDIF
