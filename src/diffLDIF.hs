@@ -8,6 +8,7 @@ import System.FilePath
 import System.Environment
 import Text.LDIF
 import System.Console.CmdArgs
+import qualified Data.ByteString.Lazy.Char8 as BC
 
 progDesc = "Create delta LDIF between Source LDIF and Target LDIF"
 
@@ -29,5 +30,5 @@ execute (DiffLdif src dst) = do
   case rights [ml1,ml2] of 
        [l1,l2] -> case diffLDIF l1 l2 of
                     Left err -> putStrLn err
-                    Right delta -> putStrLn $ ldif2str delta
+                    Right delta -> BC.putStrLn $ ldif2str delta
        _       -> print $ lefts [ml1,ml2] 

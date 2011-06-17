@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, OverloadedStrings #-}
 -- | Apply LDAP operations within LDIF on another LDIF.
 -- | Without schema related verification like syntax, cardinality etc.
 import Data.List
@@ -9,6 +9,7 @@ import System.FilePath
 import System.Environment
 import Text.LDIF
 import System.Console.CmdArgs
+import qualified Data.ByteString.Lazy.Char8 as BC
 
 progDesc = "Apply LDAP operations from LDIF to LDIF (like ldapmodify)"
 
@@ -32,9 +33,9 @@ execute cfg = do
   modLDIFs <- mapM (safeParseLDIFFile) (modFiles cfg)
   let outLDIF = foldr (flip applyLDIF) baseLDIF modLDIFs
   if length (outFile cfg) == 0 then do
-      putStrLn (ldif2str outLDIF)
+      BC.putStrLn (ldif2str outLDIF)
     else do
-      writeFile (outFile cfg) (ldif2str outLDIF)
+      BC.writeFile (outFile cfg) (ldif2str outLDIF)
       putStrLn $ (outFile cfg) ++ " written."
 
 safeParseLDIFFile :: FilePath -> IO LDIF
