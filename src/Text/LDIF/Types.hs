@@ -9,11 +9,10 @@ module Text.LDIF.Types (
         Attribute(..), Value, AttrValue
 )
 where
-import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Lazy.Char8 as BC
 import Data.Char
 
-newtype Attribute = Attribute B.ByteString deriving Show
+newtype Attribute = Attribute BC.ByteString deriving Show
 
 instance Eq Attribute where
     (Attribute xs) == (Attribute ys)  = (BC.map toUpper xs) == (BC.map toUpper ys)
@@ -21,7 +20,7 @@ instance Eq Attribute where
 instance Ord Attribute where
     (Attribute xs) `compare` (Attribute ys)  = (BC.map toUpper xs) `compare` (BC.map toUpper ys)
 
-type Value = B.ByteString
+type Value = BC.ByteString
 type AttrValue = (Attribute, Value)
 
 -- | Type of LDIF Files (Content, Changes)
@@ -36,7 +35,7 @@ instance Show LDIFType where
 
 -- | Represents LDIF structure, it can be either simply LDIF data dump or
 -- | changes LDIF with LDAP operations 
-data LDIF = LDIF { lcVersion :: Maybe B.ByteString, lcEntries :: [LDIFRecord] } deriving (Show, Eq)
+data LDIF = LDIF { lcVersion :: Maybe BC.ByteString, lcEntries :: [LDIFRecord] } deriving (Show, Eq)
 
 -- | Represents one data record within LDIF file with DN and content
 -- | Represents one change record within LDIF file with DN and content

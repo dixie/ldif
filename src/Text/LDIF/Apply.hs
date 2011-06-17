@@ -9,7 +9,6 @@ import Text.LDIF.Types
 import Text.LDIF.Utils
 import Text.LDIF.Printer
 import Data.List (nub, foldl')
-import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Lazy.Char8 as BC
 
 
