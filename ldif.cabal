@@ -56,7 +56,7 @@ Library
   Build-Depends:   base         < 5,
                    filepath,
                    bytestring,
-                   containers,
+                   containers   <= 0.3.0.0,
                    cmdargs      >= 0.2,
                    directory,
                    parsec       >= 3.1.0
