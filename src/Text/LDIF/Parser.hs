@@ -85,7 +85,7 @@ pLdifMixed = do
     pSEPs
     recs <- sepEndBy pRec pSEPs
     eof
-    return $ LDIF ver recs
+    recs `seq` return $ LDIF ver recs
 
 pLdifContent :: Parser LDIF
 pLdifContent = do
@@ -101,7 +101,7 @@ pAttrValRec = do
     dn <- pDNSpec
     pSEP
     attrVals <- sepEndBy1 pAttrValSpec pSEP
-    return $ ContentRecord dn attrVals
+    dn `seq` attrVals `seq` return $ ContentRecord dn attrVals
 
 pRec :: Parser LDIFRecord
 pRec = try pChangeRec <|> pAttrValRec
@@ -173,8 +173,8 @@ pDNSpec = do
 pDN :: Parser DN
 pDN = do
    pFILL
-   avals <- sepEndBy pAttrEqValue (char ',')  
-   return $ DN avals
+   avals <- sepEndBy pAttrEqValue (char ',')
+   avals `seq` return $ DN avals
 
 pAttrEqValue :: Parser AttrValue
 pAttrEqValue = do
@@ -182,12 +182,12 @@ pAttrEqValue = do
    att <- pAttributeType
    _ <- char '='
    val <- pAttrValueDN
-   return (att,val)
+   att `seq` val `seq` return (att,val)
 
 pAttrValueDN :: Parser Value
 pAttrValueDN = do
    xs <- many allChar
-   let ys = BC.pack xs
+   let ys = xs `seq` BC.pack xs
    ys `seq` return $ ys
    where 
      allChar = try (escChar) 
@@ -208,7 +208,7 @@ pVersionSpec = do
    _ <- string "version:"
    pFILL
    xs <- many1 digit
-   let ys = BC.pack xs
+   let ys = xs `seq` BC.pack xs
    ys `seq` return $ ys
 
 pModSpec :: Parser Modify
@@ -237,13 +237,19 @@ pAttributeDescription = pAttributeType
 
 pAttributeType :: Parser Attribute
 pAttributeType = try pLdapOid
-             <|> (do { l <- letter; o <- pAttrTypeChars; return (Attribute $ l `BC.cons` o) } )
+             <|> pCharType
+   where
+      pCharType = do
+         l <- letter 
+         o <- pAttrTypeChars
+         let xs = l `seq` o `seq` l `BC.cons` o
+         xs `seq` return $ Attribute xs
 
 pAttrValSpec :: Parser AttrValue
 pAttrValSpec = do
    name <- pAttributeDescription
    val  <- pValueSpec
-   return (name, val)
+   name `seq` val `seq` return (name, val)
 
 pValueSpec :: Parser Value
 pValueSpec = try (char ':' >> char ':' >> pFILL >> pBase64String)
@@ -257,13 +263,13 @@ pSafeString :: Parser BC.ByteString
 pSafeString = do
    c <- noneOf "\n\r :<"
    r <- many (noneOf "\n\r")   
-   let ys = BC.pack $ c:r
+   let ys = r `seq` BC.pack $ c:r
    ys `seq` return ys
 
 pSafeString' :: Parser BC.ByteString
 pSafeString' = do
    r <- many (noneOf "\n\r")
-   let ys = BC.pack r
+   let ys = r `seq` BC.pack r
    ys `seq` return ys
  
 pBase64String :: Parser BC.ByteString
@@ -272,15 +278,15 @@ pBase64String = pSafeString
 pAttrTypeChars :: Parser BC.ByteString
 pAttrTypeChars = do 
   xs <- many (satisfy (\x -> isAlphaNum x || x == '-'))
-  let ys = BC.pack xs
+  let ys = xs `seq` BC.pack xs
   ys `seq` return ys
-
 
 pLdapOid :: Parser Attribute
 pLdapOid = do
    num <- many1 digit
    rest <- many (do { _ <- string "."; n <- many1 digit; return $ '.':n})
-   return (Attribute $ BC.pack $ num ++ concat rest)
+   let xs = num `seq` rest `seq` num ++ concat rest
+   xs `seq` return (Attribute $ BC.pack xs)
 
 pFILL :: Parser ()
 pFILL = skipMany (oneOf [' ', '\t'])
