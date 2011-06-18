@@ -12,10 +12,8 @@ import Text.LDIF.Types
 import Text.LDIF.Consts
 import Text.Parsec as PR
 import Text.Parsec.ByteString.Lazy
-import Text.Parsec.Char
 import qualified Data.ByteString.Lazy.Char8 as BC
 import Data.Char
-import Data.List (isPrefixOf)
 import Numeric (readHex)
 
 -- | Parse string as LDIF content and return LDIF or ParseError
