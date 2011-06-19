@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns, OverloadedStrings #-}
+
 -- | LDIF related types
 module Text.LDIF.Types (
  	LDIF(..),   
@@ -35,27 +37,27 @@ instance Show LDIFType where
 
 -- | Represents LDIF structure, it can be either simply LDIF data dump or
 -- | changes LDIF with LDAP operations 
-data LDIF = LDIF { lcVersion :: Maybe BC.ByteString, lcEntries :: [LDIFRecord] } deriving (Show, Eq)
+data LDIF = LDIF { lcVersion :: Maybe BC.ByteString, lcEntries :: ![LDIFRecord] } deriving (Show, Eq)
 
 -- | Represents one data record within LDIF file with DN and content
 -- | Represents one change record within LDIF file with DN and content
-data LDIFRecord = ContentRecord { reDN :: DN, coAttrVals :: [AttrValue] } 
-                | ChangeRecord  { reDN :: DN, chOp :: Change } deriving (Show, Eq)
+data LDIFRecord = ContentRecord { reDN :: !DN, coAttrVals :: ![AttrValue] } 
+                | ChangeRecord  { reDN :: !DN, chOp :: !Change } deriving (Show, Eq)
 
 -- | Represents one LDAP operation within changes LDIF
-data Change = ChangeAdd     { chAttrVals :: [AttrValue] }
+data Change = ChangeAdd     { chAttrVals :: ![AttrValue] }
             | ChangeDelete 
-            | ChangeModify  { chMods :: [Modify] }
+            | ChangeModify  { chMods :: ![Modify] }
             | ChangeModDN  deriving (Show, Eq)
 
 -- | Represents ChangeModify operations upon one entry within given DN
-data Modify = ModAdd     { modAttr :: Attribute, modAttrVals :: [Value] }
-            | ModDelete  { modAttr :: Attribute, modAttrVals :: [Value] }
-            | ModReplace { modAttr :: Attribute, modAttrVals :: [Value] } deriving (Show, Eq)
+data Modify = ModAdd     { modAttr :: !Attribute, modAttrVals :: ![Value] }
+            | ModDelete  { modAttr :: !Attribute, modAttrVals :: ![Value] }
+            | ModReplace { modAttr :: !Attribute, modAttrVals :: ![Value] } deriving (Show, Eq)
 
 -- | Represents Distinguished Name (DN)
-data DN = DN { dnAttrVals :: [AttrValue] } 
-        | DNi { dnAttrVals :: [AttrValue] } deriving (Ord, Show)
+data DN = DN { dnAttrVals :: ![AttrValue] } 
+        | DNi { dnAttrVals :: ![AttrValue] } deriving (Ord, Show)
 
 instance Eq DN where
     (DN xs)  == (DN ys)   = xs == ys
