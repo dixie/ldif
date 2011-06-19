@@ -287,7 +287,7 @@ pSafeString = do
 
 pSafeString' :: Parser BC.ByteString
 pSafeString' = do
-   r <- many1 (noneOf "\n\r")
+   r <- many (noneOf "\n\r")
    let ys = r `seq` BC.pack r
    ys `seq` return ys
  
