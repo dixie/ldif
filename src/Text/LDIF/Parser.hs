@@ -111,12 +111,16 @@ pRec :: Parser LDIFRecord
 pRec = do 
   dn <- pDNSpec
   pSEP
-  try (pChangeRec' dn) <|> (pAttrValRec' dn)
+  try (pChangeRec'' dn) <|> (pAttrValRec' dn)
 
 pChangeRec :: Parser LDIFRecord
 pChangeRec = do
   dn <- pDNSpec
   pSEP
+  pChangeRec'' dn
+
+pChangeRec'' :: DN -> Parser LDIFRecord
+pChangeRec'' dn = do
   _ <- string "changetype:"
   pFILL
   pChangeRec' dn
