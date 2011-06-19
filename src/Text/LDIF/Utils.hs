@@ -116,10 +116,10 @@ getLDIFType (LDIF _ xs) = getLDIFType' con chg
       getLDIFType' _  _  = LDIFMixedType
 
 dn2dnI :: DN -> DN
-dn2dnI (DN xs) = (DNi xs)
-dn2dnI xs = xs
+dn2dnI !(DN xs) = (DNi xs)
+dn2dnI !xs = xs
 
 ldif2ldifI :: LDIF -> LDIF
-ldif2ldifI (LDIF v xs) = LDIF v ys
+ldif2ldifI !(LDIF v xs) = LDIF v ys
     where
       ys = map (\x -> x { reDN = dn2dnI (reDN x) } )  xs
