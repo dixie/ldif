@@ -73,8 +73,7 @@ pLdifChanges :: Parser LDIF
 pLdifChanges = do
     pSEPs
     ver <- optionMaybe pVersionSpec
-    pSEPs
-    recs <- sepEndBy pChangeRec pSEPs
+    recs <- sepEndBy pChangeRec pSEPs1
     eof
     return $ LDIF ver recs
 
@@ -82,8 +81,7 @@ pLdifMixed:: Parser LDIF
 pLdifMixed = do
     pSEPs
     ver <- optionMaybe pVersionSpec
-    pSEPs
-    recs <- sepEndBy pRec pSEPs
+    recs <- sepEndBy pRec pSEPs1
     eof
     recs `seq` return $ LDIF ver recs
 
@@ -91,8 +89,7 @@ pLdifContent :: Parser LDIF
 pLdifContent = do
     pSEPs
     ver <- optionMaybe pVersionSpec
-    pSEPs
-    recs <- sepEndBy pAttrValRec pSEPs
+    recs <- sepEndBy pAttrValRec pSEPs1
     eof
     return $ LDIF ver recs
 
@@ -189,13 +186,13 @@ pAttrEqValue = do
 
 pAttrValueDN :: Parser Value
 pAttrValueDN = do
-   xs <- many allChar
+   xs <- many1 allChar
    let ys = xs `seq` BC.pack xs
    ys `seq` return $ ys
    where 
-     allChar = try (escChar) 
-               <|> try (hexChar) 
-               <|> (noneOf (escapedDNChars ++ "\n\r"))
+     allChar = noneOf (escapedDNChars ++ "\n\r")
+               <|> try (hexChar)
+               <|> (escChar)
      escChar = do
        _ <- char '\\'
        oneOf escapedDNChars
@@ -211,6 +208,7 @@ pVersionSpec = do
    _ <- string "version:"
    pFILL
    xs <- many1 digit
+   pSEPs1
    let ys = xs `seq` BC.pack xs
    ys `seq` return $ ys
 
@@ -242,11 +240,28 @@ pAttributeType :: Parser Attribute
 pAttributeType = try pLdapOid
              <|> pCharType
    where
+      pDotOid = do
+         _ <- string "." 
+         n <- many1 digit
+         let xs = n `seq` '.':n
+         xs `seq` return xs
+      pLdapOid = do
+        num <- many1 digit
+        rest <- many1 pDotOid
+        let xs = num `seq` rest `seq` num ++ concat rest
+        xs `seq` return (Attribute $ BC.pack xs)
       pCharType = do
          l <- letter 
          o <- pAttrTypeChars
          let xs = l `seq` o `seq` l `BC.cons` o
          xs `seq` return $ Attribute xs
+           where
+             pAttrTypeChars :: Parser BC.ByteString
+             pAttrTypeChars = do 
+               xs <- many (satisfy (\x -> isAlphaNum x || x == '-'))
+               let ys = xs `seq` BC.pack xs
+               ys `seq` return ys
+
 
 pAttrValSpec :: Parser AttrValue
 pAttrValSpec = do
@@ -255,8 +270,8 @@ pAttrValSpec = do
    name `seq` val `seq` return (name, val)
 
 pValueSpec :: Parser Value
-pValueSpec = try (char ':' >> char ':' >> pFILL >> pBase64String)
-         <|> try (char ':' >> pFILL >> pSafeString') 
+pValueSpec = try (char ':' >> pFILL >> pSafeString')
+         <|> try (char ':' >> char ':' >> pFILL >> pBase64String)
          <|> (char ':' >> char '<' >> pFILL >> pURL)
 
 pURL :: Parser BC.ByteString
@@ -266,30 +281,18 @@ pSafeString :: Parser BC.ByteString
 pSafeString = do
    c <- noneOf "\n\r :<"
    r <- many (noneOf "\n\r")   
-   let ys = r `seq` BC.pack $ c:r
+   let xs = r `seq` c:r
+   let ys = xs `seq` BC.pack xs
    ys `seq` return ys
 
 pSafeString' :: Parser BC.ByteString
 pSafeString' = do
-   r <- many (noneOf "\n\r")
+   r <- many1 (noneOf "\n\r")
    let ys = r `seq` BC.pack r
    ys `seq` return ys
  
 pBase64String :: Parser BC.ByteString
 pBase64String = pSafeString
-
-pAttrTypeChars :: Parser BC.ByteString
-pAttrTypeChars = do 
-  xs <- many (satisfy (\x -> isAlphaNum x || x == '-'))
-  let ys = xs `seq` BC.pack xs
-  ys `seq` return ys
-
-pLdapOid :: Parser Attribute
-pLdapOid = do
-   num <- many1 digit
-   rest <- many (do { _ <- string "."; n <- many1 digit; return $ '.':n})
-   let xs = num `seq` rest `seq` num ++ concat rest
-   xs `seq` return (Attribute $ BC.pack xs)
 
 pFILL :: Parser ()
 pFILL = skipMany (oneOf [' ', '\t'])
@@ -300,4 +303,7 @@ pSEP = try (char '\r' >> char '\n' >> return () )
 
 pSEPs :: Parser ()
 pSEPs = many pSEP >> return ()
+
+pSEPs1 :: Parser ()
+pSEPs1 = many1 pSEP >> return ()
 
