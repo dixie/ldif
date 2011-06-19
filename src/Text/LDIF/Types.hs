@@ -55,7 +55,7 @@ data Modify = ModAdd     { modAttr :: Attribute, modAttrVals :: [Value] }
 
 -- | Represents Distinguished Name (DN)
 data DN = DN { dnAttrVals :: [AttrValue] } 
-        | DNi { dnAttrVals :: [AttrValue] } deriving (Show)
+        | DNi { dnAttrVals :: [AttrValue] } deriving (Ord, Show)
 
 instance Eq DN where
     (DN xs)  == (DN ys)   = xs == ys
