@@ -23,6 +23,8 @@ where
 import Prelude
 import Text.LDIF.Types
 import Data.Tree
+import Data.Maybe
+import qualified Data.Tree.Zipper as Z
 import qualified Data.ByteString.Char8 as BC
 
 -- | Find all Contents with given DN
@@ -72,22 +74,27 @@ isDNPrefixOf dn1 dn2 | (sizeOfDN dn1) >= (sizeOfDN dn2) = False
                                    in (takeDNPrefix dn2 n) == dn1
 
 dummyRootDN :: DN
-dummyRootDN = DN [(Attribute "dc", "root")]
+dummyRootDN = DN [(Attribute "", "")]
 
 ldif2tree :: LDIF -> Tree LDIFRecord
-ldif2tree (LDIF _ entries) = Node (ChangeRecord dummyRootDN (ChangeAdd [])) (ldifRecs2tree entries)
+ldif2tree (LDIF _ entries) = ldifRecs2tree entries
 
 isParentRecordOf :: LDIFRecord -> LDIFRecord -> Bool
 isParentRecordOf a b = isDNPrefixOf (reDN a) (reDN b)
 
-ldifRoots :: [LDIFRecord] -> [LDIFRecord]
-ldifRoots xs = let isRoot x = all (\y -> not $ isParentRecordOf y x) xs
-               in filter (isRoot) xs
-
-ldifRecs2tree :: [LDIFRecord] -> [Tree LDIFRecord]
-ldifRecs2tree xs = let roots = (ldifRoots xs)
-                       subtr x = ldifRecs2tree $ filter (isParentRecordOf x) xs
-                   in map (\x -> Node x (subtr x)) roots
+ldifRecs2tree :: [LDIFRecord] -> Tree LDIFRecord
+ldifRecs2tree !xs = Z.toTree $ foldl (\t n -> addNode t n) dummyRoot xs
+  where
+    dummyRoot = Z.fromTree $ Node (ContentRecord dummyRootDN []) []
+    addNode !t !n = Z.root $ Z.insert (Node n []) (seek2parent t)
+      where
+        seek2parent !z = if not $ Z.hasChildren z then Z.children z 
+                           else if isNothing z' then Z.children z else seek2parent (fromJust z')
+          where
+            z' = findChild (Z.firstChild z)
+              where
+                findChild !Nothing  = Nothing
+                findChild !(Just c) = if (Z.label c) `isParentRecordOf` n then Just c else findChild (Z.next c)
 
 isContentRecord :: LDIFRecord -> Bool
 isContentRecord (ContentRecord _ _) = True
