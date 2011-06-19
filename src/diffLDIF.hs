@@ -8,7 +8,7 @@ import System.FilePath
 import System.Environment
 import Text.LDIF
 import System.Console.CmdArgs
-import qualified Data.ByteString.Lazy.Char8 as BC
+import qualified Data.ByteString.Char8 as BC
 
 progDesc = "Create delta LDIF between Source LDIF and Target LDIF"
 

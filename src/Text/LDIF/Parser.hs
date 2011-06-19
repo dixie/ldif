@@ -11,8 +11,8 @@ import Prelude
 import Text.LDIF.Types
 import Text.LDIF.Consts
 import Text.Parsec as PR
-import Text.Parsec.ByteString.Lazy
-import qualified Data.ByteString.Lazy.Char8 as BC
+import Text.Parsec.ByteString
+import qualified Data.ByteString.Char8 as BC
 import Data.Char
 import Numeric (readHex)
 
@@ -245,7 +245,7 @@ pAttributeType = try pLdapOid
       pCharType = do
          l <- letter 
          o <- pAttrTypeChars
-         let xs = l `seq` o `seq` l `BC.cons'` o
+         let xs = l `seq` o `seq` l `BC.cons` o
          xs `seq` return $ Attribute xs
 
 pAttrValSpec :: Parser AttrValue

@@ -8,7 +8,7 @@ import System.FilePath
 import System.Environment
 import Text.LDIF
 import qualified Data.Set as Set
-import qualified Data.ByteString.Lazy.Char8 as BC
+import qualified Data.ByteString.Char8 as BC
 
 ldif2html :: Set.Set BC.ByteString -> LDIF -> BC.ByteString
 ldif2html idx (LDIF v xs) = BC.unlines $ (ver2str v) ++ (map (record2html idx) xs)

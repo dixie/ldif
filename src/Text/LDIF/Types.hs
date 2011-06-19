@@ -9,7 +9,7 @@ module Text.LDIF.Types (
         Attribute(..), Value, AttrValue
 )
 where
-import qualified Data.ByteString.Lazy.Char8 as BC
+import qualified Data.ByteString.Char8 as BC
 import Data.Char
 
 newtype Attribute = Attribute BC.ByteString deriving Show

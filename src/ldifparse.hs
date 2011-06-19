@@ -6,7 +6,7 @@ import Control.Monad
 import System.FilePath 
 import System.Environment
 import Text.LDIF
-import qualified Data.ByteString.Lazy.Char8 as BC
+import qualified Data.ByteString.Char8 as BC
 
 main = do
   args <- getArgs

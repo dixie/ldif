@@ -23,7 +23,7 @@ where
 import Prelude
 import Text.LDIF.Types
 import Data.Tree
-import qualified Data.ByteString.Lazy.Char8 as BC
+import qualified Data.ByteString.Char8 as BC
 
 -- | Find all Contents with given DN
 findRecordsByDN :: LDIF -> DN -> [LDIFRecord]

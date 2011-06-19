@@ -9,7 +9,7 @@ import Text.LDIF.Types
 import Text.LDIF.Utils
 import Text.LDIF.Printer
 import Data.List (nub, foldl')
-import qualified Data.ByteString.Lazy.Char8 as BC
+import qualified Data.ByteString.Char8 as BC
 
 
 -- | Apply one LDIF to another LDIF. The destination LDIF has

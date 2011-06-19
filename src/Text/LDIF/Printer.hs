@@ -10,7 +10,7 @@ where
 import Prelude
 import Text.LDIF.Types
 import Text.LDIF.Consts
-import qualified Data.ByteString.Lazy.Char8 as BC
+import qualified Data.ByteString.Char8 as BC
 import Data.List as L
 import Data.Char
 import Numeric (showHex)
