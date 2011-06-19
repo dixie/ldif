@@ -100,56 +100,55 @@ pAttrValRec ::  Parser LDIFRecord
 pAttrValRec = do
     dn <- pDNSpec
     pSEP
+    pAttrValRec' dn
+    
+pAttrValRec' :: DN -> Parser LDIFRecord
+pAttrValRec' dn = do
     attrVals <- sepEndBy1 pAttrValSpec pSEP
-    dn `seq` attrVals `seq` return $ ContentRecord dn attrVals
+    attrVals `seq` return $ ContentRecord dn attrVals
 
 pRec :: Parser LDIFRecord
-pRec = try pChangeRec <|> pAttrValRec
+pRec = do 
+  dn <- pDNSpec
+  pSEP
+  try (pChangeRec' dn) <|> (pAttrValRec' dn)
 
 pChangeRec :: Parser LDIFRecord
-pChangeRec = try pChangeAdd
-         <|> try pChangeDel
-         <|> try pChangeMod
-         <|> pChangeModDN
+pChangeRec = do
+  dn <- pDNSpec
+  pSEP
+  _ <- string "changetype:"
+  pFILL
+  pChangeRec' dn
 
-pChangeAdd :: Parser LDIFRecord
-pChangeAdd = do
-    dn <- pDNSpec
-    pSEP
-    _ <- string "changetype:"
-    pFILL
+pChangeRec' :: DN -> Parser LDIFRecord
+pChangeRec' dn = try (pChangeAdd dn)
+                 <|> try (pChangeDel dn)
+                 <|> try (pChangeMod dn)
+                 <|> (pChangeModDN dn)
+
+pChangeAdd :: DN -> Parser LDIFRecord
+pChangeAdd dn  = do
     _ <- string "add"
     pSEP
     vals <- sepEndBy1 pAttrValSpec pSEP
     return $ ChangeRecord dn (ChangeAdd vals)
 
-pChangeDel :: Parser LDIFRecord
-pChangeDel = do
-    dn <- pDNSpec
-    pSEP
-    _ <- string "changetype:"
-    pFILL
+pChangeDel :: DN -> Parser LDIFRecord
+pChangeDel dn = do
     _ <- string "delete"
     pSEP
     return $ ChangeRecord dn ChangeDelete
 
-pChangeMod :: Parser LDIFRecord
-pChangeMod = do
-    dn <- pDNSpec
-    pSEP
-    _ <- string "changetype:"
-    pFILL
+pChangeMod :: DN -> Parser LDIFRecord
+pChangeMod dn = do
     _ <- string "modify"
     pSEP
     mods <- sepEndBy1 pModSpec (char '-' >> pSEP)
     return $ ChangeRecord dn (ChangeModify mods)
 
-pChangeModDN :: Parser LDIFRecord
-pChangeModDN = do
-    dn <- pDNSpec
-    pSEP
-    _ <- string "changetype:"
-    pFILL
+pChangeModDN :: DN -> Parser LDIFRecord
+pChangeModDN dn = do
     _ <- string "modrdn" 
     pSEP
     _ <- string "newrdn:"
@@ -242,7 +241,7 @@ pAttributeType = try pLdapOid
       pCharType = do
          l <- letter 
          o <- pAttrTypeChars
-         let xs = l `seq` o `seq` l `BC.cons` o
+         let xs = l `seq` o `seq` l `BC.cons'` o
          xs `seq` return $ Attribute xs
 
 pAttrValSpec :: Parser AttrValue
