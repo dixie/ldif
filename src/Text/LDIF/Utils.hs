@@ -24,6 +24,8 @@ import Prelude
 import Text.LDIF.Types
 import Data.Tree
 import Data.Maybe
+import Data.List
+import qualified Data.Set as S
 import qualified Data.Tree.Zipper as Z
 import qualified Data.ByteString.Char8 as BC
 
@@ -76,11 +78,13 @@ isDNPrefixOf dn1 dn2 | (sizeOfDN dn1) >= (sizeOfDN dn2) = False
 dummyRootDN :: DN
 dummyRootDN = DN [(Attribute "", "")]
 
-ldif2tree :: LDIF -> Tree LDIFRecord
-ldif2tree (LDIF _ entries) = ldifRecs2tree entries
-
 isParentRecordOf :: LDIFRecord -> LDIFRecord -> Bool
 isParentRecordOf a b = isDNPrefixOf (reDN a) (reDN b)
+
+ldif2tree :: LDIF -> Bool -> Tree LDIFRecord
+ldif2tree (LDIF _ entries) fp = ldifRecs2tree entries'
+  where
+    entries' = if fp then addFakeParents entries else entries
 
 ldifRecs2tree :: [LDIFRecord] -> Tree LDIFRecord
 ldifRecs2tree !xs = Z.toTree $ foldl (\t n -> addNode t n) dummyRoot xs
@@ -95,6 +99,13 @@ ldifRecs2tree !xs = Z.toTree $ foldl (\t n -> addNode t n) dummyRoot xs
               where
                 findChild !Nothing  = Nothing
                 findChild !(Just c) = if (Z.label c) `isParentRecordOf` n then Just c else findChild (Z.next c)
+
+addFakeParents :: [LDIFRecord] -> [LDIFRecord]
+addFakeParents entries = let allDNs    = S.fromList $ map (reDN) entries
+                             parentDNs = S.toList $ S.fromList $ map (DN) $ filter (not . null) $ concat $ map (\e -> tails (dnAttrVals e)) (S.toList allDNs)
+                             missDNs = filter (\g -> g `S.notMember` allDNs) parentDNs
+                             fakeRecs = sortBy (\a b -> (sizeOfDN $ reDN a) `compare` (sizeOfDN $ reDN b)) $ map (\h -> ContentRecord h []) missDNs
+                         in (fakeRecs ++ entries)
 
 isContentRecord :: LDIFRecord -> Bool
 isContentRecord (ContentRecord _ _) = True
