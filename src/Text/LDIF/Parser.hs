@@ -74,6 +74,7 @@ pLdifChanges = do
     pSEPs
     ver <- optionMaybe pVersionSpec
     recs <- sepEndBy pChangeRec pSEPs1
+    _ <- optionMaybe pSearchResult
     eof
     return $ LDIF ver recs
 
@@ -82,6 +83,7 @@ pLdifMixed = do
     pSEPs
     ver <- optionMaybe pVersionSpec
     recs <- sepEndBy pRec pSEPs1
+    _ <- optionMaybe pSearchResult
     eof
     recs `seq` return $ LDIF ver recs
 
@@ -90,6 +92,7 @@ pLdifContent = do
     pSEPs
     ver <- optionMaybe pVersionSpec
     recs <- sepEndBy pAttrValRec pSEPs1
+    _ <- optionMaybe pSearchResult
     eof
     return $ LDIF ver recs
 
@@ -307,3 +310,14 @@ pSEPs = many pSEP >> return ()
 pSEPs1 :: Parser ()
 pSEPs1 = many1 pSEP >> return ()
 
+pSearchResult :: Parser ()
+pSearchResult = do
+   _ <- string "search:"
+   pFILL
+   _ <- many1 digit
+   pSEP
+   _ <- string "result:"
+   pFILL
+   _ <- pSafeString
+   pSEPs
+   return ()
