@@ -88,6 +88,8 @@ Executable ldifmodify
 Executable ldifparse
   Hs-Source-Dirs:  src
   Main-Is:         ldifparse.hs
+  if !flag(test)
+    Buildable:     False
 
 Executable test
   Hs-Source-Dirs:  src, tests
