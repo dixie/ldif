@@ -72,6 +72,7 @@ Library
         Text.LDIF.Diff
         Text.LDIF.Apply
         Text.LDIF.Consts
+        Text.LDIF.Tree
 
 Executable diffLDIF
   Hs-Source-Dirs:  src

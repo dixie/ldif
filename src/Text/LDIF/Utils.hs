@@ -1,32 +1,10 @@
 {-# LANGUAGE BangPatterns, OverloadedStrings #-}
 
 -- | LDIF related operations
-module Text.LDIF.Utils (
-        findRecordsByDN,
-	findRecordByDN,
-        isDNPrefixOf,
-        sizeOfDN,
-        takeDNPrefix,
-        leafOfDN,
-        rootOfDN,
-        lookupAttr,
-        filterAttr,
-        isDummyRecord,
-        ldif2tree,
-        getLDIFType,
-        isContentRecord,
-        isChangeRecord,
-        dn2dnI,
-        ldif2ldifI
-)
-where
+module Text.LDIF.Utils 
+       where
 import Prelude
 import Text.LDIF.Types
-import Data.Tree
-import Data.Maybe
-import Data.List
-import qualified Data.Set as S
-import qualified Data.Tree.Zipper as Z
 import qualified Data.ByteString.Char8 as BC
 
 -- | Find all Contents with given DN
@@ -57,80 +35,27 @@ leafOfDN :: DN -> AttrValue
 leafOfDN xs = getDNValue xs 0
 
 rootOfDN :: DN -> AttrValue
-rootOfDN xs = getDNValue xs ((sizeOfDN xs)-1)
+rootOfDN xs = getDNValue xs ((lengthOfDN xs)-1)
 
-sizeOfDN :: DN -> Int
-sizeOfDN xs = length (dnAttrVals xs)
+lengthOfDN :: DN -> Int
+lengthOfDN xs = length (dnAttrVals xs)
 
 getDNValue :: DN -> Int -> AttrValue
 getDNValue xs idx = (dnAttrVals xs) !! idx
 
 takeDNPrefix :: DN -> Int -> DN
 takeDNPrefix (DN vals) n  = (DN (reverse $ take n (reverse vals)))
-takeDNPrefix (DNi vals) n = (DNi (reverse $ take n (reverse vals)))
 
 -- | Check if the dn1 is prefix of dn2
 isDNPrefixOf :: DN -> DN -> Bool
-isDNPrefixOf dn1 dn2 | (sizeOfDN dn1) >= (sizeOfDN dn2) = False
-                     | otherwise = let n = (sizeOfDN dn1)
+isDNPrefixOf dn1 dn2 | (lengthOfDN dn1) >= (lengthOfDN dn2) = False
+                     | otherwise = let n = (lengthOfDN dn1)
                                    in (takeDNPrefix dn2 n) == dn1
-
-dummyRootDN :: DN
-dummyRootDN = DN [(Attribute "", "")]
 
 isParentRecordOf :: LDIFRecord -> LDIFRecord -> Bool
 isParentRecordOf a b = isDNPrefixOf (reDN a) (reDN b)
 
-ldif2tree :: LDIF -> Bool -> Tree LDIFRecord
-ldif2tree (LDIF _ entries) fp = ldifRecs2tree entries'
-  where
-    entries' = if fp then addFakeParents entries else entries
 
-ldifRecs2tree :: [LDIFRecord] -> Tree LDIFRecord
-ldifRecs2tree !xs = Z.toTree $ foldl (\t n -> addNode t n) dummyRoot xs
-  where
-    dummyRoot = Z.fromTree $ Node (ContentRecord dummyRootDN []) []
-    addNode !t !n = Z.root $ Z.insert (Node n []) (seek2parent t)
-      where
-        seek2parent !z = if not $ Z.hasChildren z then Z.children z 
-                           else if isNothing z' then Z.children z else seek2parent (fromJust z')
-          where
-            z' = findChild (Z.firstChild z)
-              where
-                findChild !Nothing  = Nothing
-                findChild !(Just c) = if (Z.label c) `isParentRecordOf` n then Just c else findChild (Z.next c)
-
-addFakeParents :: [LDIFRecord] -> [LDIFRecord]
-addFakeParents entries = let allDNs    = S.fromList $ map (reDN) entries
-                             parentDNs = S.toList $ S.fromList $ map (DN) $ filter (not . null) $ concat $ map (\e -> tails (dnAttrVals e)) (S.toList allDNs)
-                             missDNs = filter (\g -> g `S.notMember` allDNs) parentDNs
-                             fakeRecs = sortBy (\a b -> (sizeOfDN $ reDN a) `compare` (sizeOfDN $ reDN b)) $ map (\h -> ContentRecord h []) missDNs
-                         in (fakeRecs ++ entries)
-
-isContentRecord :: LDIFRecord -> Bool
-isContentRecord (ContentRecord _ _) = True
-isContentRecord _ = False
-
-isChangeRecord :: LDIFRecord -> Bool
-isChangeRecord (ChangeRecord _ _) = True
-isChangeRecord _ = False
-
-getLDIFType :: LDIF -> LDIFType
-getLDIFType (LDIF _ []) = LDIFContentType
-getLDIFType (LDIF _ xs) = getLDIFType' con chg
-    where
-      con = filter (isContentRecord) xs
-      chg = filter (not . isContentRecord) xs
-      getLDIFType' [] [] = error "Unexpected"
-      getLDIFType' [] _  = LDIFChangesType
-      getLDIFType' _  [] = LDIFContentType
-      getLDIFType' _  _  = LDIFMixedType
-
-dn2dnI :: DN -> DN
-dn2dnI !(DN xs) = (DNi xs)
-dn2dnI !xs = xs
-
+-- | Make LDIF Values case-insensitive
 ldif2ldifI :: LDIF -> LDIF
-ldif2ldifI !(LDIF v xs) = LDIF v ys
-    where
-      ys = map (\x -> x { reDN = dn2dnI (reDN x) } )  xs
+ldif2ldifI = undefined
