@@ -3,6 +3,7 @@
 -- | LDIF serializers
 module Text.LDIF.Printer (
 	ldif2str,
+        ver2str,
         dn2str,
 	record2str
 )

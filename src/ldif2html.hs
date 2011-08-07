@@ -10,14 +10,6 @@ import Text.LDIF
 import qualified Data.Set as Set
 import qualified Data.ByteString.Char8 as BC
 
-ldif2html :: Set.Set BC.ByteString -> LDIF -> BC.ByteString
-ldif2html idx (LDIF v xs) = BC.unlines $ (ver2str v) ++ (map (record2html idx) xs)
-
--- | Serialize version to LDIF Format Lines
-ver2str :: Maybe BC.ByteString -> [BC.ByteString]
-ver2str Nothing = []
-ver2str (Just v) = ["version: " `BC.append` v]
-
 -- | Serialize DN to LDIF Format
 dn2html :: DN -> BC.ByteString
 dn2html ys@(DN xs) = BC.concat [ "<div id=\"abc" 
