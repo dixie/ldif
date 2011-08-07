@@ -14,7 +14,8 @@ where
 import qualified Data.ByteString.Char8 as BC
 import Data.Char
 
-newtype Attribute = Attribute BC.ByteString deriving Show
+-- | Attribute name is case-insensitive string
+data Attribute = Attribute { aName :: BC.ByteString } deriving Show
 
 instance Eq Attribute where
     (Attribute xs) == (Attribute ys)  = (BC.map toUpper xs) == (BC.map toUpper ys)
@@ -25,10 +26,11 @@ instance Ord Attribute where
 type Value = BC.ByteString
 type AttrValue = (Attribute, Value)
 
--- | Type of LDIF Files (Content, Changes)
-data LDIFType = LDIFContentType 
-              | LDIFChangesType 
-              | LDIFMixedType deriving Eq
+-- | Enumeration LDIF Types
+data LDIFType = LDIFContentType -- ^ LDIF with Content Records
+              | LDIFChangesType -- ^ LDIF with Changes Records
+              | LDIFMixedType   -- ^ LDIF with both Content and Changes Records
+              deriving Eq
 
 instance Show LDIFType where
     show LDIFChangesType = "Delta"
@@ -36,13 +38,14 @@ instance Show LDIFType where
     show LDIFMixedType   = "Mixed"
 
 -- | Represents LDIF structure, it can be either simply LDIF data dump or
--- | changes LDIF with LDAP operations 
+-- changes LDIF with LDAP operations 
 data LDIF = LDIF { lcVersion :: Maybe BC.ByteString, lcEntries :: ![LDIFRecord] } deriving (Show, Eq)
 
--- | Represents one data record within LDIF file with DN and content
--- | Represents one change record within LDIF file with DN and content
-data LDIFRecord = ContentRecord { reDN :: !DN, coAttrVals :: ![AttrValue] } 
-                | ChangeRecord  { reDN :: !DN, chOp :: !Change } deriving (Show, Eq)
+data LDIFRecord
+  -- | Represents one data record within LDIF file with DN and content
+  = ContentRecord { reDN :: !DN, coAttrVals :: ![AttrValue] } 
+  -- | Represents one change record within LDIF file with DN and content
+  | ChangeRecord  { reDN :: !DN, chOp :: !Change } deriving (Show, Eq)
 
 -- | Represents one LDAP operation within changes LDIF
 data Change = ChangeAdd     { chAttrVals :: ![AttrValue] }
@@ -56,10 +59,26 @@ data Modify = ModAdd     { modAttr :: !Attribute, modAttrVals :: ![Value] }
             | ModReplace { modAttr :: !Attribute, modAttrVals :: ![Value] } deriving (Show, Eq)
 
 -- | Represents Distinguished Name (DN)
-data DN = DN { dnAttrVals :: ![AttrValue] } 
-        | DNi { dnAttrVals :: ![AttrValue] } deriving (Ord, Show)
+data DN = DN { dnAttrVals :: ![AttrValue] } deriving (Eq, Ord, Show)
 
-instance Eq DN where
-    (DN xs)  == (DN ys)   = xs == ys
-    (DNi xs) == (DNi ys)  = (map (\(n,v) -> (n,(BC.map toUpper v)))  xs) == (map (\(n,v) -> (n,(BC.map toUpper v))) ys)
-    x        == y         = (DNi (dnAttrVals x)) == (DNi (dnAttrVals y))
+-- | Check if LDIFRecord is Content Record
+isContentRecord :: LDIFRecord -> Bool
+isContentRecord (ContentRecord _ _) = True
+isContentRecord _ = False
+
+-- | Check if LDIFRecord is Change Record
+isChangeRecord :: LDIFRecord -> Bool
+isChangeRecord (ChangeRecord _ _) = True
+isChangeRecord _ = False
+
+-- | Dettect from LDIF content the Type (Content, Changes, Mixed)
+getLDIFType :: LDIF -> LDIFType
+getLDIFType (LDIF _ []) = LDIFContentType
+getLDIFType (LDIF _ xs) = getLDIFType' con chg
+    where
+      con = filter (isContentRecord) xs
+      chg = filter (not . isContentRecord) xs
+      getLDIFType' [] [] = LDIFContentType -- Fallback Empty LDIF as an Content LDIF
+      getLDIFType' [] _  = LDIFChangesType
+      getLDIFType' _  [] = LDIFContentType
+      getLDIFType' _  _  = LDIFMixedType

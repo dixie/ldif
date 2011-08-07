@@ -13,7 +13,7 @@ import qualified Data.ByteString.Char8 as BC
 
 
 -- | Apply one LDIF to another LDIF. The destination LDIF has
--- | to be Content LDIF
+-- to be Content LDIF
 applyLDIF :: LDIF -> LDIF -> LDIF
 applyLDIF dst (LDIF _ xs) = foldl' (\ld chg -> applyRecord2LDIF chg ld) dst xs
 

@@ -7,14 +7,15 @@ import Text.LDIF.Types
 import Text.LDIF.Utils
 import Data.Maybe
 
--- | Create Change LDIF between to LDIF contents. If any
--- | of input argument is not LDIFContent it returns Nothing. 
--- | If there is not difference the Change LDIF with empty
--- | change list is returned.
--- |
--- | Unsing following strategy: 
--- | 1. Iterate over L1 DN's and Modify / Remove Content 
--- | 2. Iterate over L2 and Add Content not in L1
+-- | Create Change LDIF between to LDIF contents. 
+-- If any of input argument is not LDIFContent it returns Nothing. 
+-- If there is not difference the Change LDIF with empty change list is returned.
+--
+-- Using following strategy: 
+-- 
+-- 1. Iterate over L1 DN's and Modify / Remove Content 
+-- 
+-- 2. Iterate over L2 and Add Content not in L1
 diffLDIF :: LDIF -> LDIF -> Either String LDIF
 diffLDIF l1 l2 | getLDIFType l1 == LDIFContentType && getLDIFType l2 == LDIFContentType = Right (diffLDIF' l1 l2)
                | otherwise = Left ("Diff supported only on Content LDIFs but SRC="
@@ -39,7 +40,7 @@ diffLDIF' l1@(LDIF _ c1) l2@(LDIF v2 c2) = LDIF v2 (changes ++ adds)
       content2add (ChangeRecord _ _)      = error "Unexpected record type"
 
 -- | Diff two AttrVal Records if any of provided. 
--- | Implementation uses inefficient algorithm for large count of attributes within ContentRecord.
+--   Implementation uses inefficient algorithm for large count of attributes within ContentRecord.
 diffRecord :: LDIFRecord -> LDIFRecord -> Maybe LDIFRecord
 diffRecord r1 r2 | (reDN r1) /= (reDN r2) = Nothing
                  | otherwise = Just (ChangeRecord (reDN r1) (ChangeModify mods))
