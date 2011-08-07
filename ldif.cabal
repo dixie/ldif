@@ -2,26 +2,24 @@ Name:            ldif
 Version:         1.0.0
 License:         BSD3
 License-File:    LICENSE
-Synopsis:        The LDAP Data Interchange Format (LDIF) parser 
+Synopsis:        The LDAP Data Interchange Format (LDIF) tools 
 Author:          Radoslav Dorcik <radoslav.dorcik@gmail.com>
 Homepage:        http://rampa.sk/static/ldif.html
 Maintainer:      radoslav.dorcik@gmail.com
 Description:     
- LDIF files parser implementation using Parsec and based
- on RFC 2849 - The LDAP Data Interchange Format (LDIF).
+ LDIF files parser implementation using Parsec.
+ The LDAP Data Interchange Format (LDIF) is defined by RFC 2849.
  .
  Current implementation is unfinished and need to be enhanced
  for base64 encoded values and various DN escaping. 
  .
- It includes following tool:
+ Package includes following command line tools:
  .
- - diffLDIF command generates change LDIF between two 
-   content LDIF files.
+ - diffLDIF - calculates change (delta) LDIF between two content LDIF files.
  .
- - ldif2html command generates hypertext HTML browsable
-   LDIF file. 
+ - ldif2html - produces HTML/browsable LDIF file. 
  .
- - ldifmodify commmand apply change LDIF on contenct LDIF
+ - ldifmodify - apply operations from change (delta) LDIF on content LDIF (similar to ldapmodify)
  .
 Category:        Text
 Stability:       experimental
