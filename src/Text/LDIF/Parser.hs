@@ -190,7 +190,7 @@ pAttrEqValue = do
 pAttrValueDN :: Parser Value
 pAttrValueDN = do
    xs <- many1 allChar
-   let ys = xs `seq` BC.pack xs
+   let ys = xs `seq` (Value $ BC.pack xs)
    ys `seq` return $ ys
    where 
      allChar = noneOf (escapedDNChars ++ "\n\r")
@@ -271,11 +271,11 @@ pAttrValSpec = do
    name <- pAttributeDescription
    val  <- pValueSpec
    name `seq` val `seq` return (name, val)
-
-pValueSpec :: Parser Value
-pValueSpec = try (char ':' >> pFILL >> pSafeString')
-         <|> try (char ':' >> char ':' >> pFILL >> pBase64String)
-         <|> (char ':' >> char '<' >> pFILL >> pURL)
+     where
+       pValueSpec :: Parser Value
+       pValueSpec = try (char ':' >> pFILL >> pSafeString' >>= (\x -> return $ Value x))
+                    <|> try (char ':' >> char ':' >> pFILL >> pBase64String >>= (\x -> return $ Value x))
+                    <|> (char ':' >> char '<' >> pFILL >> pURL >>= (\x -> return $ Value x))
 
 pURL :: Parser BC.ByteString
 pURL = pSafeString

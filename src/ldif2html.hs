@@ -20,39 +20,54 @@ ver2str (Just v) = ["version: " `BC.append` v]
 
 -- | Serialize DN to LDIF Format
 dn2html :: DN -> BC.ByteString
-dn2html ys@(DN xs) = BC.concat [ "<div id=\"abc", nm, "\"></div><b>dn:</b> <font color=\"green\"><b>", dnstr, "</b></font>"]
+dn2html ys@(DN xs) = BC.concat [ "<div id=\"abc" 
+                               , nm 
+                               , "\"></div><b>dn:</b> <font color=\"green\"><b>" 
+                               , dnstr 
+                               , "</b></font>" ]
       where
-        dnstr = BC.intercalate "," $ map (\((Attribute n),v) -> n `BC.append` "=" `BC.append` v) xs
-        nm = dn2last ys
-
-dn2last (DN xs) = snd $ head xs
+        dnstr = BC.intercalate "," $ map (\((Attribute n),v) -> n `BC.append` "=" `BC.append` (aVal v)) xs
+        nm = aVal $ dn2last ys
 
 -- | Serialize Change Record in LDIF Format
-record2html :: Set.Set BC.ByteString -> LDIFRecord -> BC.ByteString
+record2html :: Set.Set Value -> LDIFRecord -> BC.ByteString
 record2html idx (ChangeRecord dn (ChangeDelete))     = BC.unlines   [ (dn2str dn), "changetype: delete" ]
 record2html idx (ChangeRecord dn (ChangeAdd xs))     = BC.unlines $ [ (dn2html dn), "changetype: add"    ] ++ (attrVals2Ln idx xs)
 record2html idx (ChangeRecord dn (ChangeModify xs))  = BC.unlines $ [ (dn2str dn), "changetype: modify" ] ++ (mods2Ln idx xs)
 record2html idx (ChangeRecord dn (ChangeModDN))      = BC.unlines $ [ (dn2str dn), "changetype: moddn"  ]
 record2html idx (ContentRecord dn xs) = BC.unlines $ [ (dn2html dn) ] ++ (attrVals2Ln idx xs)
 
-attrVals2Ln :: Set.Set BC.ByteString -> [AttrValue] -> [BC.ByteString]
+attrVals2Ln :: Set.Set Value -> [AttrValue] -> [BC.ByteString]
 attrVals2Ln idx xs = map (attrVal2Ln idx) xs
 
-attrVal2Ln :: Set.Set BC.ByteString -> AttrValue -> BC.ByteString
-attrVal2Ln idx ((Attribute n),v) = if Set.member v idx then BC.concat [ "<b>",n,"</b> : <a href=\"#abc",v,"\">",v,"</a>"]
-                          else BC.concat [ "<b>",n,"</b> : ",v]
+attrVal2Ln :: Set.Set Value -> AttrValue -> BC.ByteString
+attrVal2Ln idx ((Attribute n),v) = if Set.member v idx then BC.concat [ "<b>"
+                                                                      , n 
+                                                                      , "</b> : <a href=\"#abc"
+                                                                      , aVal v
+                                                                      , "\">" 
+                                                                      , aVal v
+                                                                      , "</a>"]
+                          else BC.concat [ "<b>",n,"</b> : ",aVal v]
 
-mods2Ln :: Set.Set BC.ByteString -> [Modify] -> [BC.ByteString]
+mods2Ln :: Set.Set Value -> [Modify] -> [BC.ByteString]
 mods2Ln idx xs = intercalate ["-"] $ map (mod2Ln idx) xs
 
-mod2Ln :: Set.Set BC.ByteString -> Modify -> [BC.ByteString]
-mod2Ln idx (ModAdd     a@(Attribute nm) xs) = [ attrVal2Ln idx ((Attribute "add"),nm)     ] ++ (map (\v -> attrVal2Ln idx (a,v)) xs) 
-mod2Ln idx (ModDelete  a@(Attribute nm) xs) = [ attrVal2Ln idx ((Attribute "delete"),nm)  ] ++ (map (\v -> attrVal2Ln idx (a,v)) xs)
-mod2Ln idx (ModReplace a@(Attribute nm) xs) = [ attrVal2Ln idx ((Attribute "replace"),nm) ] ++ (map (\v -> attrVal2Ln idx (a,v)) xs)
+mod2Ln :: Set.Set Value -> Modify -> [BC.ByteString]
+mod2Ln idx mod = [ attrVal2Ln idx (modName,attrName) ] ++ valLst
+  where
+    attrName = Value $ aName $ modAttr mod
+    valLst = map (\v -> attrVal2Ln idx (modAttr mod,v)) $ modAttrVals mod
+    modName = case mod of 
+      (ModAdd _ _)     -> Attribute "add"
+      (ModDelete _ _)  -> Attribute "delete"
+      (ModReplace _ _) -> Attribute "replace"
 
--- Dummy ldif2html implementation but it should
--- display LDIF file as HTML with values as href to
--- DN which has the value as the leaf RDN value
+dns :: LDIF -> Set.Set Value
+dns (LDIF _ xs) = Set.fromList $ nub $ map (dn2last . reDN) xs
+
+dn2last (DN xs) = snd $ head xs
+
 main = do
   args <- getArgs
   case args of 
@@ -64,14 +79,18 @@ main = do
                       doLDIF2HTML (init xs) (BC.writeFile (last xs)) 
                       putStrLn $ "## Processed : " ++ (unlines $ init xs)
                       putStrLn $ "## Written   : " ++ (last xs)
+  where
+    doLDIF2HTML names outF = do
+      mls <- mapM parseLDIFFile names
+      case lefts mls of 
+        []   -> do
+                let idx = Set.unions $ map dns $ rights mls
+                outF $ BC.concat [ "<html><body bgcolor=lightyellow><pre>"
+                                 , BC.concat $ map (ldif2html idx) (rights mls) 
+                                 , "</pre></body></html>" ]
+        xs  -> mapM_ print xs
+      -- | Serialize LDIF to HTML
+    ldif2html :: Set.Set Value -> LDIF -> BC.ByteString
+    ldif2html idx (LDIF v xs) = BC.unlines $ (ver2str v) ++ (map (record2html idx) xs)
 
-doLDIF2HTML names outF = do
-  mls <- mapM (parseLDIFFile) names
-  case lefts mls of 
-       []   -> do
-                 let idx = Set.unions $ map (dns) (rights mls)
-                 outF $ BC.concat ["<html><body bgcolor=lightyellow><pre>", BC.concat $ map (ldif2html idx) (rights mls), "</pre></body></html>" ]
-       xs  -> mapM_ print xs
 
-dns :: LDIF -> Set.Set BC.ByteString
-dns (LDIF _ xs) = Set.fromList $ nub $ map (dn2last . reDN) xs

@@ -8,7 +8,10 @@ module Text.LDIF.Types (
         Modify(..), 
         DN(..), 
         LDIFType(..),
-        Attribute(..), Value, AttrValue
+        Attribute(..), Value(..), AttrValue,
+        isContentRecord,
+        isChangeRecord,
+        getLDIFType
 )
 where
 import qualified Data.ByteString.Char8 as BC
@@ -23,7 +26,19 @@ instance Eq Attribute where
 instance Ord Attribute where
     (Attribute xs) `compare` (Attribute ys)  = (BC.map toUpper xs) `compare` (BC.map toUpper ys)
 
-type Value = BC.ByteString
+-- | Attribute value is either case sensitive or insensitive string
+data Value = Value  { aVal :: BC.ByteString }
+           | ValueI { aVal :: BC.ByteString } deriving Show
+             
+instance Eq Value where
+    (Value xs) == (Value ys)  = xs == ys
+    xs == ys  = (BC.map toUpper $ aVal xs) == (BC.map toUpper $ aVal ys)
+
+instance Ord Value where
+    (Value xs) `compare` (Value ys)  = xs `compare` ys
+    xs `compare` ys = (BC.map toUpper $ aVal xs) `compare` (BC.map toUpper $ aVal ys)
+
+-- | Pair of Atribute and Value
 type AttrValue = (Attribute, Value)
 
 -- | Enumeration LDIF Types
