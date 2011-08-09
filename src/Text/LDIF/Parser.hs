@@ -2,9 +2,11 @@
 
 module Text.LDIF.Parser (
 	parseLDIFStr,
-        parseLDIFStrAs,
 	parseLDIFFile,
-        parseDNStr
+        parseDNStr,
+        preproc,
+        defaulLDIFConf,
+        LDIFParserConfig(..)
 )
 where
 import Prelude
@@ -12,35 +14,42 @@ import Text.LDIF.Types
 import Text.LDIF.Consts
 import Text.Parsec as PR
 import Text.Parsec.ByteString
+import Text.Parsec.Pos (initialPos)
+import Text.Parsec.Error (Message(..), newErrorMessage)
 import qualified Data.ByteString.Char8 as BC
 import Data.Char
+import Data.Maybe (fromJust, isNothing)
 import Numeric (readHex)
 
+-- | LDIF Parser configuration
+data LDIFParserConfig = LDIFParserConfig { lpExpectedType :: Maybe LDIFType  -- ^ Type of LDIF expected
+                                         , lpCaseSensitive :: Bool } -- ^ Parse as Case Sensitive LDIF
+                      deriving Show
+
+-- | Default configuration for parser (Any LDIF Type, Case Sensitive)
+defaulLDIFConf :: LDIFParserConfig
+defaulLDIFConf = LDIFParserConfig Nothing True
+
 -- | Parse string as LDIF content and return LDIF or ParseError
-parseLDIFStr :: BC.ByteString -> Either ParseError LDIF
-parseLDIFStr = parseLDIFStrAs Nothing 
+parseLDIFStr :: LDIFParserConfig -> FilePath -> BC.ByteString -> Either ParseError LDIF
+parseLDIFStr conf name xs = case eldif of 
+                               Left err  -> Left err
+                               Right ldf -> checkExpectedType ldf
+  where 
+    eldif = parse (pLdif conf) name $ preproc xs
+    checkExpectedType ldf | (isNothing $ lpExpectedType conf) = Right ldf
+                          | (getLDIFType ldf) == (fromJust $ lpExpectedType conf) = Right ldf
+                          | otherwise = Left $ newErrorMessage (UnExpect "Invalid LDIF Type") (initialPos name)                                                                                    
 
 -- | Read and parse provided file and return LDIF or ParseError
-parseLDIFFile :: String -> IO (Either ParseError LDIF)
-parseLDIFFile name = do
+parseLDIFFile :: LDIFParserConfig -> FilePath -> IO (Either ParseError LDIF)
+parseLDIFFile conf name = do
 	input <- BC.readFile name
-        return $ parseLDIFStrAs' name Nothing input
-
--- | Read and parse provided string and return LDIF or ParserError
--- | If LDIF type is specified than given type is expected for parsing 
--- | and mismatch generates ParseError
-parseLDIFStrAs' :: String -> Maybe LDIFType -> BC.ByteString -> Either ParseError LDIF
-parseLDIFStrAs' nm Nothing                xs = parse pLdif        nm $ preproc xs
-parseLDIFStrAs' nm (Just LDIFMixedType)   xs = parse pLdif        nm $ preproc xs
-parseLDIFStrAs' nm (Just LDIFContentType) xs = parse pLdifContent nm $ preproc xs
-parseLDIFStrAs' nm (Just LDIFChangesType) xs = parse pLdifChanges nm $ preproc xs
-
-parseLDIFStrAs :: Maybe LDIFType -> BC.ByteString -> Either ParseError LDIF
-parseLDIFStrAs = parseLDIFStrAs' "(param)"
+        return $ parseLDIFStr conf name input
 
 -- | Parse string as DN and return DN type or ParseError
-parseDNStr :: BC.ByteString -> Either ParseError DN
-parseDNStr = parse pDN "(param)" 
+parseDNStr :: LDIFParserConfig -> BC.ByteString -> Either ParseError DN
+parseDNStr conf = parse (pDN conf) "(param)" 
 
 -- | Preprocessing for concat wrapped lines and remove comment lines
 preproc :: BC.ByteString -> BC.ByteString
@@ -66,131 +75,113 @@ takeLine (x:xs) = let isCont z = " " `BC.isPrefixOf` z
                   in (x `BC.append` (BC.concat $ map (BC.tail) $ takeWhile (isCont) xs), dropWhile (isCont) xs) 
 
 -- | Parsec ldif parser
-pLdif :: Parser LDIF
-pLdif = try pLdifChanges <|> pLdifMixed
-
-pLdifChanges :: Parser LDIF
-pLdifChanges = do
-    pSEPs
+pLdif :: LDIFParserConfig -> Parser LDIF
+pLdif conf = do
+    pSEPs conf
     ver <- optionMaybe pVersionSpec
-    recs <- sepEndBy pChangeRec pSEPs1
-    _ <- optionMaybe pSearchResult
-    eof
-    return $ LDIF ver recs
-
-pLdifMixed:: Parser LDIF
-pLdifMixed = do
-    pSEPs
-    ver <- optionMaybe pVersionSpec
-    recs <- sepEndBy pRec pSEPs1
+    recs <- sepEndBy (pRec conf) (pSEPs1 conf)
     _ <- optionMaybe pSearchResult
     eof
     recs `seq` return $ LDIF ver recs
+  where
+    pVersionSpec :: Parser BC.ByteString
+    pVersionSpec = do
+      _ <- string "version:"
+      pFILL conf
+      xs <- many1 digit
+      pSEPs1 conf
+      let ys = xs `seq` BC.pack xs
+      ys `seq` return $ ys
+    pSearchResult :: Parser ()
+    pSearchResult = do
+      _ <- string "search:"
+      pFILL conf
+      _ <- many1 digit
+      pSEP conf
+      _ <- string "result:"
+      pFILL conf
+      _ <- pSafeString conf
+      pSEPs conf
+      return ()
 
-pLdifContent :: Parser LDIF
-pLdifContent = do
-    pSEPs
-    ver <- optionMaybe pVersionSpec
-    recs <- sepEndBy pAttrValRec pSEPs1
-    _ <- optionMaybe pSearchResult
-    eof
-    return $ LDIF ver recs
-
-pAttrValRec ::  Parser LDIFRecord
-pAttrValRec = do
-    dn <- pDNSpec
-    pSEP
-    pAttrValRec' dn
-    
-pAttrValRec' :: DN -> Parser LDIFRecord
-pAttrValRec' dn = do
-    attrVals <- sepEndBy1 pAttrValSpec pSEP
-    attrVals `seq` return $ ContentRecord dn attrVals
-
-pRec :: Parser LDIFRecord
-pRec = do 
+pRec :: LDIFParserConfig -> Parser LDIFRecord
+pRec conf = do 
   dn <- pDNSpec
-  pSEP
-  try (pChangeRec'' dn) <|> (pAttrValRec' dn)
-
-pChangeRec :: Parser LDIFRecord
-pChangeRec = do
-  dn <- pDNSpec
-  pSEP
-  pChangeRec'' dn
-
-pChangeRec'' :: DN -> Parser LDIFRecord
-pChangeRec'' dn = do
-  _ <- string "changetype:"
-  pFILL
-  pChangeRec' dn
-
-pChangeRec' :: DN -> Parser LDIFRecord
-pChangeRec' dn = try (pChangeAdd dn)
-                 <|> try (pChangeDel dn)
-                 <|> try (pChangeMod dn)
-                 <|> (pChangeModDN dn)
-
-pChangeAdd :: DN -> Parser LDIFRecord
-pChangeAdd dn  = do
+  pSEP conf
+  try (pChangeRec dn) <|> (pAttrValRec dn)
+    where
+      pDNSpec :: Parser DN
+      pDNSpec = do
+        _ <- string "dn:"
+        pDN conf
+      pAttrValRec :: DN -> Parser LDIFRecord
+      pAttrValRec dn = do
+        attrVals <- sepEndBy1 (pAttrValSpec conf) (pSEP conf)
+        attrVals `seq` return $ ContentRecord dn attrVals
+      pChangeRec :: DN -> Parser LDIFRecord
+      pChangeRec dn = do
+        _ <- string "changetype:"
+        pFILL conf
+        try (pChangeAdd conf dn)
+        <|> try (pChangeDel conf dn)
+        <|> try (pChangeMod conf dn)
+        <|> (pChangeModDN conf dn)
+                      
+pChangeAdd :: LDIFParserConfig -> DN -> Parser LDIFRecord
+pChangeAdd conf dn  = do
     _ <- string "add"
-    pSEP
-    vals <- sepEndBy1 pAttrValSpec pSEP
+    pSEP conf
+    vals <- sepEndBy1 (pAttrValSpec conf) (pSEP conf)
     return $ ChangeRecord dn (ChangeAdd vals)
 
-pChangeDel :: DN -> Parser LDIFRecord
-pChangeDel dn = do
+pChangeDel :: LDIFParserConfig -> DN -> Parser LDIFRecord
+pChangeDel conf dn = do
     _ <- string "delete"
-    pSEP
+    pSEP conf
     return $ ChangeRecord dn ChangeDelete
 
-pChangeMod :: DN -> Parser LDIFRecord
-pChangeMod dn = do
+pChangeMod :: LDIFParserConfig -> DN -> Parser LDIFRecord
+pChangeMod conf dn = do
     _ <- string "modify"
-    pSEP
-    mods <- sepEndBy1 pModSpec (char '-' >> pSEP)
+    pSEP conf
+    mods <- sepEndBy1 (pModSpec conf) (char '-' >> pSEP conf)
     return $ ChangeRecord dn (ChangeModify mods)
 
-pChangeModDN :: DN -> Parser LDIFRecord
-pChangeModDN dn = do
+pChangeModDN :: LDIFParserConfig -> DN -> Parser LDIFRecord
+pChangeModDN conf dn = do
     _ <- string "modrdn" 
-    pSEP
+    pSEP conf
     _ <- string "newrdn:"
-    pFILL 
-    _ <- pRDN
-    pSEP
+    pFILL conf
+    _ <- pRDN conf
+    pSEP conf
     _ <- string "deleteoldrdn:"
-    pFILL
+    pFILL conf
     _ <- oneOf "01"
-    pSEP
+    pSEP conf
     return $ ChangeRecord dn ChangeModDN
 
-pRDN :: Parser BC.ByteString
-pRDN = pSafeString
+pRDN :: LDIFParserConfig -> Parser BC.ByteString
+pRDN conf = pSafeString conf
 
-pDNSpec :: Parser DN
-pDNSpec = do
-    _ <- string "dn:"
-    pDN
-
-pDN :: Parser DN
-pDN = do
-   pFILL
-   avals <- sepEndBy pAttrEqValue (char ',')
+pDN :: LDIFParserConfig -> Parser DN
+pDN conf = do
+   pFILL conf
+   avals <- sepEndBy (pAttrEqValue conf) (char ',')
    avals `seq` return $ DN avals
 
-pAttrEqValue :: Parser AttrValue
-pAttrEqValue = do
-   pFILL
-   att <- pAttributeType
+pAttrEqValue :: LDIFParserConfig -> Parser AttrValue
+pAttrEqValue conf = do
+   pFILL conf
+   att <- pAttributeType conf
    _ <- char '='
-   val <- pAttrValueDN
+   val <- pAttrValueDN conf
    att `seq` val `seq` return (att,val)
 
-pAttrValueDN :: Parser Value
-pAttrValueDN = do
+pAttrValueDN :: LDIFParserConfig -> Parser Value
+pAttrValueDN conf = do
    xs <- many1 allChar
-   let ys = xs `seq` (Value $ BC.pack xs)
+   let ys = xs `seq` (mkVal conf $ BC.pack xs)
    ys `seq` return $ ys
    where 
      allChar = noneOf (escapedDNChars ++ "\n\r")
@@ -206,22 +197,13 @@ pAttrValueDN = do
          [(val,[])] -> return $ chr val
          _          -> fail $ "invalid hex value: " ++ hval
 
-pVersionSpec :: Parser BC.ByteString
-pVersionSpec = do
-   _ <- string "version:"
-   pFILL
-   xs <- many1 digit
-   pSEPs1
-   let ys = xs `seq` BC.pack xs
-   ys `seq` return $ ys
-
-pModSpec :: Parser Modify
-pModSpec = do
-   modType <- pModType
-   pFILL
-   att <- pAttributeDescription 
-   pSEP 
-   vals <- sepEndBy pAttrValSpec pSEP
+pModSpec :: LDIFParserConfig -> Parser Modify
+pModSpec conf = do
+   modType <- pModType conf
+   pFILL conf
+   att <- pAttributeDescription conf
+   pSEP conf
+   vals <- sepEndBy (pAttrValSpec conf) (pSEP conf)
    return $ mkMod modType att vals
 
 mkMod :: String -> Attribute -> [AttrValue] -> Modify
@@ -231,16 +213,16 @@ mkMod modType att vals | modType == "add:" = ModAdd att (map (snd) vals)
                        | otherwise = error $ "unexpected mod:" ++ modType
                          -- error can not be reached because pModType
 
-pModType :: Parser String
-pModType = try (string "add:")
+pModType :: LDIFParserConfig -> Parser String
+pModType conf = try (string "add:")
        <|> try (string "delete:")
        <|> string "replace:"
 
-pAttributeDescription :: Parser Attribute
-pAttributeDescription = pAttributeType
+pAttributeDescription :: LDIFParserConfig -> Parser Attribute
+pAttributeDescription conf = pAttributeType conf
 
-pAttributeType :: Parser Attribute
-pAttributeType = try pLdapOid
+pAttributeType :: LDIFParserConfig -> Parser Attribute
+pAttributeType conf = try pLdapOid
              <|> pCharType
    where
       pDotOid = do
@@ -266,58 +248,50 @@ pAttributeType = try pLdapOid
                ys `seq` return ys
 
 
-pAttrValSpec :: Parser AttrValue
-pAttrValSpec = do
-   name <- pAttributeDescription
+pAttrValSpec :: LDIFParserConfig -> Parser AttrValue
+pAttrValSpec conf = do
+   name <- pAttributeDescription conf
    val  <- pValueSpec
    name `seq` val `seq` return (name, val)
      where
        pValueSpec :: Parser Value
-       pValueSpec = try (char ':' >> pFILL >> pSafeString' >>= (\x -> return $ Value x))
-                    <|> try (char ':' >> char ':' >> pFILL >> pBase64String >>= (\x -> return $ Value x))
-                    <|> (char ':' >> char '<' >> pFILL >> pURL >>= (\x -> return $ Value x))
+       pValueSpec = try (char ':' >> pFILL conf >> pSafeString' conf >>= (\x -> return $ mkVal conf x))
+                    <|> try (char ':' >> char ':' >> pFILL conf >> pBase64String conf >>= (\x -> return $ mkVal conf x))
+                    <|> (char ':' >> char '<' >> pFILL conf >> pURL conf >>= (\x -> return $ mkVal conf x))
 
-pURL :: Parser BC.ByteString
-pURL = pSafeString
+pURL :: LDIFParserConfig -> Parser BC.ByteString
+pURL conf = pSafeString conf
 
-pSafeString :: Parser BC.ByteString
-pSafeString = do
+pSafeString :: LDIFParserConfig -> Parser BC.ByteString
+pSafeString conf = do
    c <- noneOf "\n\r :<"
    r <- many (noneOf "\n\r")   
    let xs = r `seq` c:r
    let ys = xs `seq` BC.pack xs
    ys `seq` return ys
 
-pSafeString' :: Parser BC.ByteString
-pSafeString' = do
+pSafeString' :: LDIFParserConfig -> Parser BC.ByteString
+pSafeString' conf = do
    r <- many (noneOf "\n\r")
    let ys = r `seq` BC.pack r
    ys `seq` return ys
  
-pBase64String :: Parser BC.ByteString
-pBase64String = pSafeString
+pBase64String :: LDIFParserConfig -> Parser BC.ByteString
+pBase64String conf = pSafeString conf
 
-pFILL :: Parser ()
-pFILL = skipMany (oneOf [' ', '\t'])
+pFILL :: LDIFParserConfig -> Parser ()
+pFILL conf = skipMany (oneOf [' ', '\t'])
 
-pSEP :: Parser ()
-pSEP = try (char '\r' >> char '\n' >> return () )
+pSEP :: LDIFParserConfig -> Parser ()
+pSEP conf = try (char '\r' >> char '\n' >> return () )
    <|> (char '\n' >> return () )
 
-pSEPs :: Parser ()
-pSEPs = many pSEP >> return ()
+pSEPs :: LDIFParserConfig -> Parser ()
+pSEPs conf = many (pSEP conf) >> return ()
 
-pSEPs1 :: Parser ()
-pSEPs1 = many1 pSEP >> return ()
+pSEPs1 :: LDIFParserConfig -> Parser ()
+pSEPs1 conf = many1 (pSEP conf) >> return ()
 
-pSearchResult :: Parser ()
-pSearchResult = do
-   _ <- string "search:"
-   pFILL
-   _ <- many1 digit
-   pSEP
-   _ <- string "result:"
-   pFILL
-   _ <- pSafeString
-   pSEPs
-   return ()
+mkVal :: LDIFParserConfig -> BC.ByteString -> Value
+mkVal conf v | (lpCaseSensitive conf) = Value v
+             | otherwise              = ValueI v
