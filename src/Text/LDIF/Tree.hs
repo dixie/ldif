@@ -14,7 +14,12 @@ import qualified Data.Tree.Zipper as Z
 
 -- | Convert Tree of Records to LDIF
 fromTree :: Tree LDIFRecord -> LDIF
-fromTree xs = LDIF Nothing (flatten xs)
+fromTree !xs = ys `seq` LDIF Nothing ys
+  where
+    ys = (filter (not . isFakeEntry) $ flatten xs)
+      where
+        isFakeEntry (ContentRecord _ []) = True
+        isFakeEntry _ = False
 
 -- | Convert LDIF to Tree using DNs. It can construct missing parents as an dummy records.
 toTree :: LDIF -> Bool -> Tree LDIFRecord
