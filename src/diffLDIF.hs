@@ -25,8 +25,8 @@ main = do
 execute (DiffLdif []  _  ) = putStrLn "Error: -s source file is mandatory" 
 execute (DiffLdif _ []   ) = putStrLn "Error: -t target file is mandatory"
 execute (DiffLdif src dst) = do
-  ml1 <- parseLDIFFile src
-  ml2 <- parseLDIFFile dst
+  ml1 <- parseLDIFFile defaulLDIFConf src
+  ml2 <- parseLDIFFile defaulLDIFConf dst
   case rights [ml1,ml2] of 
        [l1,l2] -> case diffLDIF l1 l2 of
                     Left err -> putStrLn err

@@ -73,7 +73,7 @@ main = do
                       putStrLn $ "## Written   : " ++ (last xs)
   where
     doLDIF2HTML names outF = do
-      mls <- mapM parseLDIFFile names
+      mls <- mapM (parseLDIFFile defaulLDIFConf) names
       case lefts mls of 
         []   -> do
                 let idx = Set.unions $ map dns $ rights mls

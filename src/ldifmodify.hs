@@ -39,4 +39,4 @@ execute cfg = do
       putStrLn $ (outFile cfg) ++ " written."
 
 safeParseLDIFFile :: FilePath -> IO LDIF
-safeParseLDIFFile name = liftM (either (\e -> error $ "Can not parse: "++(show e)) (id)) (parseLDIFFile name)
+safeParseLDIFFile name = liftM (either (\e -> error $ "Can not parse: "++(show e)) (id)) (parseLDIFFile defaulLDIFConf name)
