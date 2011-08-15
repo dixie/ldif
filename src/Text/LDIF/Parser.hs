@@ -123,9 +123,9 @@ pRec conf = do
         _ <- string "changetype:"
         pFILL conf
         try (pChangeAdd conf dn)
-        <|> try (pChangeDel conf dn)
-        <|> try (pChangeMod conf dn)
-        <|> (pChangeModDN conf dn)
+          <|> try (pChangeDel conf dn)
+          <|> try (pChangeMod conf dn)
+          <|> (pChangeModDN conf dn)
                       
 pChangeAdd :: LDIFParserConfig -> DN -> Parser LDIFRecord
 pChangeAdd conf dn  = do
