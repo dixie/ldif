@@ -77,14 +77,20 @@ Library
 Executable diffLDIF
   Hs-Source-Dirs:  src
   Main-Is:         diffLDIF.hs
+  if flag(test)
+    Buildable:     False
 
 Executable ldif2html
   Hs-Source-Dirs:  src
   Main-Is:         ldif2html.hs
+  if flag(test)
+    Buildable:     False
 
 Executable ldifmodify
   Hs-Source-Dirs:  src
   Main-Is:         ldifmodify.hs
+  if flag(test)
+    Buildable:     False
 
 Executable ldifparse
   Hs-Source-Dirs:  src
