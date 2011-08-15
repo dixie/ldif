@@ -7,7 +7,7 @@ import System.FilePath
 import Control.Monad (liftM)
 import qualified Data.ByteString.Char8 as BC
 
-ldifDir = "data"
+ldifDir = "tests/data"
 
 main = do
     ls <- getLDIFs ldifDir
