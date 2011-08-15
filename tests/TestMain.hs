@@ -5,6 +5,7 @@ import Data.List
 import System.Directory
 import System.FilePath
 import Control.Monad (liftM)
+import qualified Data.ByteString.Char8 as BC
 
 ldifDir = "data"
 
@@ -21,27 +22,27 @@ testCasesDIFF = [TestCase (assertEqual "dummy" True True)]
 testCasesParseOK ls = map (\x -> TestCase (checkParsing x)) $ filter (isOK) ls
     where
       checkParsing fname = do
-        ret <- parseLDIFFile fname
+        ret <- parseLDIFFile defaulLDIFConf fname
         assertParsedOK fname ret "Parsing test"
 
 testCasesPrintOK ls = map (\x -> TestCase (checkParsing x)) $ filter (isOK) ls
     where
       checkParsing fname = do
-        ret <- parseLDIFFile fname
+        ret <- parseLDIFFile defaulLDIFConf fname
         case ret of 
           Left _     -> return ()
           Right ldif -> do
-              let ret2 = parseLDIFStr (ldif2str ldif)
+              let ret2 = parseLDIFStr defaulLDIFConf fname (ldif2str ldif)
               assertParsedOK fname ret2 "Printing test"
 
 testCasesUtils = [ TestCase (assertBool "DN1Root is Prefix of DN2Root" (not $ isDNPrefixOf dn1root dn2root))
                  , TestCase (assertBool "DN1Root is Prefix of DN1Child" (isDNPrefixOf dn1root dn1child))
-                 , TestCase (assertBool "DN Size 1" (1 == sizeOfDN dn1root))
-                 , TestCase (assertBool "DN Size 2" (2 == sizeOfDN dn1child))]
+                 , TestCase (assertBool "DN Size 1" (1 == lengthOfDN dn1root))
+                 , TestCase (assertBool "DN Size 2" (2 == lengthOfDN dn1child))]
     where
-      dn1root = head $ rights [ parseDNStr "dc=sk" ]
-      dn2root = head $ rights [ parseDNStr "dc=de" ]
-      dn1child = head $ rights [ parseDNStr "o=green,dc=sk" ]
+      dn1root = head $ rights [ parseDNStr defaulLDIFConf $ BC.pack "dc=sk" ]
+      dn2root = head $ rights [ parseDNStr defaulLDIFConf $ BC.pack "dc=de" ]
+      dn1child = head $ rights [ parseDNStr defaulLDIFConf $ BC.pack "o=green,dc=sk" ]
 --
 -- Support Methods
 --
