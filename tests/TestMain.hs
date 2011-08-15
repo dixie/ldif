@@ -7,63 +7,87 @@ import System.FilePath
 import Control.Monad (liftM)
 import qualified Data.ByteString.Char8 as BC
 
+-- | Directory with input LDIF files for tests
 ldifDir = "tests/data"
 
 main = do
     ls <- getLDIFs ldifDir
     runTestTT (tests ls)
-
-tests ls = TestList $ (testCasesParseOK ls) ++ testCasesDIFF ++ testCasesUtils ++ (testCasesPrintOK ls)
+  where
+    tests ls = TestList $ (testCasesParseOK ls) 
+               ++ testCasesDiff
+               ++ testCasesApply
+               ++ testCasesTree
+               ++ testCasesUtils 
+               ++ (testCasesPrintOK ls)
 
 --
 -- Test Cases
 --
-testCasesDIFF = [TestCase (assertEqual "dummy" True True)]
-testCasesParseOK ls = map (\x -> TestCase (checkParsing x)) $ filter (isOK) ls
+testCasesDiff  = [ TestCase (assertEqual "dummy" True True) ] -- TODO: Implement!
+testCasesApply = [ TestCase (assertEqual "dummy" True True) ] -- TODO: Implement!
+testCasesTree  = [ TestCase (assertEqual "dummy" True True) ] -- TODO: Implement!
+
+-- | Parser Tests
+testCasesParseOK ls = map (TestCase . checkParsing) $ filter isSuccessFile ls
     where
       checkParsing fname = do
         ret <- parseLDIFFile defaulLDIFConf fname
         assertParsedOK fname ret "Parsing test"
 
-testCasesPrintOK ls = map (\x -> TestCase (checkParsing x)) $ filter (isOK) ls
+-- | Printer Tests
+testCasesPrintOK ls = map (TestCase . checkParsing) $ filter isSuccessFile ls
     where
       checkParsing fname = do
         ret <- parseLDIFFile defaulLDIFConf fname
-        case ret of 
-          Left _     -> return ()
-          Right ldif -> do
+        either (\_ -> return ()) printAndParseAgain ret
+          where
+            printAndParseAgain ldif = do
               let ret2 = parseLDIFStr defaulLDIFConf fname (ldif2str ldif)
               assertParsedOK fname ret2 "Printing test"
 
-testCasesUtils = [ TestCase (assertBool "DN1Root is Prefix of DN2Root" (not $ isDNPrefixOf dn1root dn2root))
-                 , TestCase (assertBool "DN1Root is Prefix of DN1Child" (isDNPrefixOf dn1root dn1child))
-                 , TestCase (assertBool "DN Size 1" (1 == lengthOfDN dn1root))
-                 , TestCase (assertBool "DN Size 2" (2 == lengthOfDN dn1child))]
+-- | Utils Tests
+testCasesUtils = [ TestCase $ assertBool "DN1Root is Prefix of DN2Root"  $ not $ dn1root `isDNPrefixOf` dn2root
+                 , TestCase $ assertBool "DN1Root is Prefix of DN1Child" $ dn1root `isDNPrefixOf` dn1child
+                 , TestCase $ assertBool "DN Size 1" $ 1 == lengthOfDN dn1root
+                 , TestCase $ assertBool "DN Size 2" $ 2 == lengthOfDN dn1child 
+                 ]
     where
-      dn1root = head $ rights [ parseDNStr defaulLDIFConf $ BC.pack "dc=sk" ]
-      dn2root = head $ rights [ parseDNStr defaulLDIFConf $ BC.pack "dc=de" ]
-      dn1child = head $ rights [ parseDNStr defaulLDIFConf $ BC.pack "o=green,dc=sk" ]
---
--- Support Methods
---
+      dn1root  = parseRightDN "dc=sk"
+      dn2root  = parseRightDN "dc=de"
+      dn1child = parseRightDN "o=green,dc=sk"
+      parseRightDN dstr = fromRight $ parseDNStr defaulLDIFConf $ BC.pack dstr
+        where
+          fromRight (Left e)  = error $ show e
+          fromRight (Right d) = d
+
+-- | Support Methods
 getLDIFs :: String -> IO [String]
 getLDIFs dr = do
     liftM (map (dr </>)) $ liftM (filter isLDIF) $ getDirectoryContents dr
-  
-isOK x = isPrefixOf "OK" (takeFileName x)
-isLDIF x = isSuffixOf ".ldif" x
+      where
+        isLDIF x = isSuffixOf ".ldif" x  
+        
+-- | Assert that file is parsed successfully and correct LDIF type
+assertParsedOK name ret msg  = either onError onSuccess ret
+  where
+    onSuccess l = assertParsedType name l
+    onError   e = assertFailure $ msg ++ " " ++ show e 
 
-assertParsedOK filename ret msg  = case ret of
-  Left e -> assertFailure $ msg ++ " " ++ (show e)
-  Right ldif -> assertParsedType filename ldif
+-- | Assert that file is parsed with expected LDIF type
+assertParsedType name l = assertType $ contentTypeFile name
+  where
+    assertType t | getLDIFType l == t = assertBool "Valid Content Type" True
+                 | otherwise          = let msg = name ++ " is not type of " ++ (show t) ++ " but " ++ (show $ getLDIFType l)
+                                        in assertFailure msg
 
-assertParsedType name ldif | (isSuffixOf ".modify.ldif" name) = assertTypeChanges name ldif
-                           | (isSuffixOf ".content.ldif" name) = assertTypeContent name ldif
-                           | otherwise = assertFailure $ "Unexpected filename: (not .modify.ldif or .content.ldif " ++ name
+-- | Files which names begin with "OK" are expected to be parsed Successfully
+isSuccessFile x = isPrefixOf "OK" (takeFileName x)
 
-assertTypeContent n l  | (getLDIFType l == LDIFContentType) = assertBool "Valid Content Type" True -- >> (putStrLn $ "\n\n" ++ n ++ "\n\n" ++ (show l))
-                       | otherwise          = assertFailure $ n ++ " is not type of LDIFContent"
-
-assertTypeChanges n l | (getLDIFType l /= LDIFContentType) = assertBool "Valid Changes Type" True -- >> (putStrLn $ "\n\n" ++ n ++ "\n\n" ++ (show l))
-                      | otherwise          = assertFailure $ n ++ " is not type of LDIFChanges"
-  
+-- | Files suffixes defines what is expected parsed content type
+contentTypeFile x | isModifyFile  x = LDIFChangesType
+                  | isContentFile x = LDIFContentType
+                  | otherwise       = error $ "Invalid filename format in tests: " ++ x
+  where
+    isModifyFile x  = isSuffixOf ".modify.ldif"  x
+    isContentFile x = isSuffixOf ".content.ldif" x
