@@ -98,9 +98,9 @@ Executable ldifparse
   if !flag(test)
     Buildable:     False
 
-Executable test
-  Hs-Source-Dirs:  src, tests
-  Main-Is:         TestMain.hs
-  Build-Depends:   base, HUnit == 1.2.*
-  if !flag(test)
-    Buildable:     False
+Test-Suite ldif-test
+    type:           exitcode-stdio-1.0
+    Main-Is:        TestMain.hs
+    Build-Depends:  base, HUnit == 1.2.*
+    Hs-Source-Dirs:  src, tests
+

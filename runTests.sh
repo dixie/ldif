@@ -11,12 +11,12 @@ if [ -z "$1" ]; then
 fi
 
 if [ "$1" = "run" ]; then
-    ./dist/build/test/test
+    cabal test
 elif [ "$1" = "build" ]; then
-    cabal configure -ftest && cabal build && ./dist/build/test/test
+    cabal configure --enable-tests && cabal build && cabal test
 elif [ "$1" = "rebuild" ]; then
     cabal clean
-    cabal configure -ftest && cabal build && ./dist/build/test/test
+    cabal configure --enable-tests && cabal build && cabal test
 else
     showUsage $0
 fi
