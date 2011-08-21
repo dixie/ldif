@@ -12,19 +12,19 @@ import qualified Data.ByteString.Char8 as BC
 
 progDesc = "Create delta LDIF between Source LDIF and Target LDIF"
 
-data DiffLdif = DiffLdif { srcFile :: FilePath
+data LdifDiff = LdifDiff { srcFile :: FilePath
                          , dstFile :: FilePath } deriving (Show, Data, Typeable)
 
-defaultCfg = DiffLdif { srcFile = def &= typFile &= name "s" &= help "Source LDIF File"
+defaultCfg = LdifDiff { srcFile = def &= typFile &= name "s" &= help "Source LDIF File"
                       , dstFile = def &= typFile &= name "t" &= help "Target LDIF File" }
 
 main = do
   cfg <- cmdArgs defaultCfg
   execute cfg
 
-execute (DiffLdif []  _  ) = putStrLn "Error: -s source file is mandatory" 
-execute (DiffLdif _ []   ) = putStrLn "Error: -t target file is mandatory"
-execute (DiffLdif src dst) = do
+execute (LdifDiff []  _  ) = putStrLn "Error: -s source file is mandatory" 
+execute (LdifDiff _ []   ) = putStrLn "Error: -t target file is mandatory"
+execute (LdifDiff src dst) = do
   ml1 <- parseLDIFFile defaulLDIFConf src
   ml2 <- parseLDIFFile defaulLDIFConf dst
   case rights [ml1,ml2] of 

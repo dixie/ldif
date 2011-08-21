@@ -15,7 +15,7 @@ Description:
  .
  Package includes following command line tools:
  .
- - diffLDIF - calculates change (delta) LDIF between two content LDIF files.
+ - ldifdiff - calculates change (delta) LDIF between two content LDIF files.
  .
  - ldif2html - produces HTML/browsable LDIF file. 
  .
@@ -74,9 +74,9 @@ Library
         Text.LDIF.Consts
         Text.LDIF.Tree
 
-Executable diffLDIF
+Executable ldifdiff
   Hs-Source-Dirs:  src
-  Main-Is:         diffLDIF.hs
+  Main-Is:         ldifdiff.hs
   if flag(test)
     Buildable:     False
 
