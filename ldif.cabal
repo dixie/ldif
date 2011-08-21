@@ -61,7 +61,7 @@ Library
                    parsec       >= 3.1.0
   Hs-Source-Dirs:  src
   Extensions:      CPP, PatternGuards
-  Ghc-Options:      -Wall -fno-warn-orphans
+  Ghc-Options:      -Wall -fno-warn-orphans -O2
 
   Exposed-modules:
         Text.LDIF
