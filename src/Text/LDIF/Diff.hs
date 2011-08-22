@@ -25,19 +25,20 @@ diffLDIF l1 l2 | getLDIFType l1 == LDIFContentType && getLDIFType l2 == LDIFCont
 diffLDIF' :: LDIF -> LDIF -> LDIF
 diffLDIF' l1@(LDIF _ c1) l2@(LDIF v2 c2) = LDIF v2 (changes ++ adds)
    where 
-      adds = map (content2add) $ filter (not . isEntryIn l1) c2
-      changes = filter (not . isDummyRecord) $ foldl (processEntry) [] c1
-      processEntry xs e1 = let me2 = findRecordByDN l2 (reDN e1) 
-                               change = case me2 of
-					   Nothing -> ChangeRecord (reDN e1) ChangeDelete
-                                           Just e2 -> fromJust $ diffRecord e1 e2
-                           in xs ++ [change]
-      isEntryIn ll ex = let mex = findRecordByDN ll (reDN ex)
-                        in case mex of
-                          Nothing -> False
-                          Just _  -> True
-      content2add (ContentRecord dn vals) = ChangeRecord dn (ChangeAdd vals)
-      content2add (ChangeRecord _ _)      = error "Unexpected record type"
+      adds = map content2add $ filter (not . isEntryIn l1) c2
+        where
+          isEntryIn ll ex = case findRecordByDN ll (reDN ex) of
+                              Nothing                   -> False
+                              Just (ContentRecord _ _)  -> True
+                              Just (ChangeRecord _ _)   -> error "Unexpected record type"
+          content2add (ContentRecord dn vals) = ChangeRecord dn (ChangeAdd vals)
+          content2add (ChangeRecord _ _)      = error "Unexpected record type"
+      changes = filter (not . isDummyRecord) $ foldl processEntry [] c1
+        where
+          processEntry xs e1 = let change = case findRecordByDN l2 (reDN e1) of
+                                     Nothing -> ChangeRecord (reDN e1) ChangeDelete
+                                     Just e2 -> fromJust $ diffRecord e1 e2
+                               in xs ++ [change]
 
 -- | Diff two AttrVal Records if any of provided. 
 --   Implementation uses inefficient algorithm for large count of attributes within ContentRecord.
