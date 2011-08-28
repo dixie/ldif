@@ -12,6 +12,7 @@ where
 import Prelude
 import Text.LDIF.Types
 import Text.LDIF.Consts
+import Text.LDIF.Preproc
 import Text.Parsec as PR
 import Text.Parsec.ByteString
 import Text.Parsec.Pos (initialPos)
@@ -50,29 +51,6 @@ parseLDIFFile conf name = do
 -- | Parse string as DN and return DN type or ParseError
 parseDNStr :: LDIFParserConfig -> BC.ByteString -> Either ParseError DN
 parseDNStr conf = parse (pDN conf) "(param)" 
-
--- | Preprocessing for concat wrapped lines and remove comment lines
-preproc :: BC.ByteString -> BC.ByteString
-preproc xs = BC.unlines $ stripComments $ unwrap $ BC.lines xs
-
--- | Remove Comment Lines
-stripComments :: [BC.ByteString] -> [BC.ByteString]
-stripComments input = filter (not . BC.isPrefixOf "#") input
-
--- | Unwrap lines, lines with space at begin is continue of previous line 
-unwrap :: [BC.ByteString] -> [BC.ByteString]
-unwrap xs = takeLines xs
-
-takeLines :: [BC.ByteString] -> [BC.ByteString]
-takeLines [] = []
-takeLines xs = let (ln,ys) = takeLine xs
-               in ln:takeLines ys
-
-takeLine :: [BC.ByteString] -> (BC.ByteString, [BC.ByteString])
-takeLine []  = (BC.empty,[])
-takeLine (x:[]) = (x,[])
-takeLine (x:xs) = let isCont z = " " `BC.isPrefixOf` z
-                  in (x `BC.append` (BC.concat $ map (BC.tail) $ takeWhile (isCont) xs), dropWhile (isCont) xs) 
 
 -- | Parsec ldif parser
 pLdif :: LDIFParserConfig -> Parser LDIF

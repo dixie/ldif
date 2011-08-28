@@ -67,6 +67,7 @@ Library
         Text.LDIF
         Text.LDIF.Types
         Text.LDIF.Parser
+        Text.LDIF.Preproc
         Text.LDIF.Printer
         Text.LDIF.Utils
         Text.LDIF.Diff
