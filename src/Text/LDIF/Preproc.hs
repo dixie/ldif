@@ -14,6 +14,8 @@ import qualified Data.Map as M
 type Position = (Line,Column) 
 type PosDeltaLine = Int
 type PosDeltaCol  = Int
+
+-- | Opaque data necessary for relation between text after preprocessing and original
 data PosTable = PosTable (M.Map Position PosDeltaLine) (M.Map Position PosDeltaCol)
 
 findDeltaLine :: PosTable -> Position -> PosDeltaLine
