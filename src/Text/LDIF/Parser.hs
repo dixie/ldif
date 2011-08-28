@@ -34,10 +34,11 @@ defaulLDIFConf = LDIFParserConfig Nothing True
 -- | Parse string as LDIF content and return LDIF or ParseError
 parseLDIFStr :: LDIFParserConfig -> FilePath -> BC.ByteString -> Either ParseError LDIF
 parseLDIFStr conf name xs = case eldif of 
-                               Left err  -> Left err
+                               Left err  -> Left $ transposePos ptab err
                                Right ldf -> checkExpectedType ldf
   where 
-    eldif = parse (pLdif conf) name $ preproc xs
+    (input, ptab) = preproc xs
+    eldif = parse (pLdif conf) name input
     checkExpectedType ldf | (isNothing $ lpExpectedType conf) = Right ldf
                           | (getLDIFType ldf) == (fromJust $ lpExpectedType conf) = Right ldf
                           | otherwise = Left $ newErrorMessage (UnExpect "Invalid LDIF Type") (initialPos name)                                                                                    
