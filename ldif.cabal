@@ -74,6 +74,7 @@ Library
         Text.LDIF.Apply
         Text.LDIF.Consts
         Text.LDIF.Tree
+        Text.LDIF.Undo
 
 Executable ldifdiff
   Hs-Source-Dirs:  src
@@ -90,6 +91,12 @@ Executable ldif2html
 Executable ldifmodify
   Hs-Source-Dirs:  src
   Main-Is:         ldifmodify.hs
+  if flag(test)
+    Buildable:     False
+
+Executable ldifundo
+  Hs-Source-Dirs:  src
+  Main-Is:         ldifundo.hs
   if flag(test)
     Buildable:     False
 
