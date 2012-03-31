@@ -2,8 +2,8 @@
 import Data.List
 import Data.Either
 import Data.Maybe
-import Control.Monad 
-import System.FilePath 
+import Control.Monad
+import System.FilePath
 import System.Environment
 import Text.LDIF
 import System.Console.CmdArgs
@@ -24,7 +24,8 @@ main = do
 execute (LdifUndo [] _) = putStrLn "Error: -f base LDIF File is mandatory"
 execute cfg = do
   inLDIF <- safeParseLDIFFile (inFile cfg)
-  let outLDIF = undoLDIF inLDIF
+  let (outLDIF, wrn) = undoLDIF inLDIF
+  when (not $ null wrn) (putStrLn $ "Finished with warnings: " ++ (unlines $ map unlines wrn))
   if length (outFile cfg) == 0 then do
       BC.putStrLn (ldif2str outLDIF)
     else do
