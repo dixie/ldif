@@ -109,6 +109,7 @@ Executable ldifparse
 Test-Suite ldif-test
     type:           exitcode-stdio-1.0
     Main-Is:        TestMain.hs
+    Ghc-Options:      -Wall -fno-warn-orphans -O2
     Build-Depends:  base, HUnit == 1.2.*
     Hs-Source-Dirs:  src, tests
 
