@@ -163,7 +163,7 @@ pAttrValueDN conf = do
    let ys = xs `seq` (mkVal conf $ BC.pack xs)
    ys `seq` return $ ys
    where 
-     allChar = noneOf (escapedDNChars ++ "\n\r")
+     allChar = noneOf (escapedDNChars ++ "\n")
                <|> try (hexChar)
                <|> (escChar)
      escChar = do
@@ -193,7 +193,7 @@ mkMod modType att vals | modType == "add:" = ModAdd att (map (snd) vals)
                          -- error can not be reached because pModType
 
 pModType :: LDIFParserConfig -> Parser String
-pModType conf = try (string "add:")
+pModType _ = try (string "add:")
        <|> try (string "delete:")
        <|> string "replace:"
 
@@ -201,7 +201,7 @@ pAttributeDescription :: LDIFParserConfig -> Parser Attribute
 pAttributeDescription conf = pAttributeType conf
 
 pAttributeType :: LDIFParserConfig -> Parser Attribute
-pAttributeType conf = try pLdapOid
+pAttributeType _ = try pLdapOid
              <|> pCharType
    where
       pDotOid = do
@@ -242,16 +242,16 @@ pURL :: LDIFParserConfig -> Parser BC.ByteString
 pURL conf = pSafeString conf
 
 pSafeString :: LDIFParserConfig -> Parser BC.ByteString
-pSafeString conf = do
-   c <- noneOf "\n\r :<"
-   r <- many (noneOf "\n\r")   
+pSafeString _ = do
+   c <- noneOf "\n :<"
+   r <- many (noneOf "\n")   
    let xs = r `seq` c:r
    let ys = xs `seq` BC.pack xs
    ys `seq` return ys
 
 pSafeString' :: LDIFParserConfig -> Parser BC.ByteString
-pSafeString' conf = do
-   r <- many (noneOf "\n\r")
+pSafeString' _ = do
+   r <- many (noneOf "\n")
    let ys = r `seq` BC.pack r
    ys `seq` return ys
  
@@ -259,11 +259,10 @@ pBase64String :: LDIFParserConfig -> Parser BC.ByteString
 pBase64String conf = pSafeString conf
 
 pFILL :: LDIFParserConfig -> Parser ()
-pFILL conf = skipMany (oneOf [' ', '\t'])
+pFILL _ = skipMany (oneOf [' ', '\t'])
 
 pSEP :: LDIFParserConfig -> Parser ()
-pSEP conf = try (char '\r' >> char '\n' >> return () )
-   <|> (char '\n' >> return () )
+pSEP _ = char '\n' >> return ()
 
 pSEPs :: LDIFParserConfig -> Parser ()
 pSEPs conf = many (pSEP conf) >> return ()

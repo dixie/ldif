@@ -7,7 +7,6 @@ where
 import Text.Parsec
 import Text.Parsec.Error (setErrorPos)
 import qualified Data.ByteString.Char8 as BC
-import Data.Maybe
 import qualified Data.Map as M
 
 -- | Contains Mapping between Position in preprocessed text to original text Position
@@ -44,7 +43,14 @@ transposePos ptab oe = setErrorPos npos oe
 preproc :: BC.ByteString -> (BC.ByteString, PosTable)
 preproc xs = (BC.unlines ys, ptab)
   where 
-    (ys, ptab) = stripComments $ unwrap $ (BC.lines xs, PosTable M.empty M.empty)
+    (ys, ptab) = stripComments $ unwrap $ (specLines xs, PosTable M.empty M.empty)
+
+specLines :: BC.ByteString -> [BC.ByteString]
+specLines xs = map cleanLine $ BC.lines xs
+  where
+    cleanLine l = BC.reverse $ BC.dropWhile (isCR) (BC.reverse l)
+      where
+        isCR c = c == '\r'
 
 -- | Remove Comment Lines
 stripComments :: ([BC.ByteString],PosTable) -> ([BC.ByteString], PosTable)
