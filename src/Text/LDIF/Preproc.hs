@@ -54,10 +54,10 @@ preproc xs = (str, ptab)
 specLines :: BC.ByteString -> [BC.ByteString]
 specLines xs = map cleanLine $ BC.lines xs
   where
-    cleanLine l = BC.reverse $ BC.dropWhile (isCR) (BC.reverse l)
-      where
-        isCR c = c == '\r'
-
+    isCR c = c == '\r'
+    cleanLine l | BC.null l        = l
+                | isCR (BC.last l) = cleanLine $ BC.init l
+                | otherwise        = l
 
 tokenizeLines :: [BC.ByteString] -> [LdifLine]
 tokenizeLines xs = map tokenizeLine $ zip xs [1..]
