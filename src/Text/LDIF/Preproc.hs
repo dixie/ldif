@@ -6,44 +6,50 @@ module Text.LDIF.Preproc ( preproc
 where
 import Text.Parsec
 import Text.Parsec.Error (setErrorPos)
+import Text.Parsec as PR
+import Text.Parsec.ByteString
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Map as M
-
--- | Contains Mapping between Position in preprocessed text to original text Position
-type Position = (Line,Column) 
-type PosDeltaLine = Int
-type PosDeltaCol  = Int
+import Data.List (foldl', sortBy)
 
 -- | Opaque data necessary for relation between text after preprocessing and original
-data PosTable = PosTable (M.Map Position PosDeltaLine) (M.Map Position PosDeltaCol)
+type PosTable = [ PosOp ]
 
-findDeltaLine :: PosTable -> Position -> PosDeltaLine
-findDeltaLine (PosTable ptabLine _) pos = M.findWithDefault 0 pos ptabLine
+data PosOp = PosOpAddLine { psLine :: Int }
+           | PosOpWrap    { psLine :: Int, psW :: Int, psWP :: Int } deriving Show
 
-findDeltaCol :: PosTable -> Position -> PosDeltaCol
-findDeltaCol (PosTable _ ptabCol) pos = M.findWithDefault 0 pos ptabCol
+data LdifLine = LdifLine     { llNum :: Int, llStr :: BC.ByteString }
+              | LdifLineCont { llNum :: Int, llStr :: BC.ByteString }
+              | LdifComment  { llNum :: Int, llStr :: BC.ByteString }
 
 -- | Convert error position to original text before preprocessing
 transposePos :: PosTable -> ParseError -> ParseError
 transposePos ptab oe = setErrorPos npos oe
   where
+    opos = errorPos oe
     npos = setSourceColumn (setSourceLine opos nlin) ncol
       where
-        opos = errorPos oe        
-        olin = sourceLine opos
-        ocol = sourceColumn opos
-        ncol = ocol + dcol
-          where
-            dcol = findDeltaCol ptab (olin,ocol) 
-        nlin = olin + dlin
-          where
-            dlin = findDeltaLine ptab (olin,ocol)
-            
+        opIdx a b = (psLine a) `compare` (psLine b)
+        ocord = (sourceLine opos,sourceColumn opos)
+        (nlin,ncol) = calcPos (sortBy opIdx ptab) ocord
+
+calcPos :: PosTable -> (Int, Int) -> (Int, Int)
+calcPos xs cord = foldl' updatePos cord xs
+  where
+    updatePos (l0,c0) (PosOpAddLine l)    | l0 >= l        = (l0+1,c0)
+    updatePos (l0,c0) (PosOpWrap l w wp)  | l0 >= l        = (l0+1,c0)
+    updatePos (l0,c0) (PosOpWrap l w wp)  | (l0+1) == l && c0 > w && (c0-1-w) > wp  = (l0+1,c0)
+    updatePos (l0,c0) (PosOpWrap l w wp)  | (l0+1) == l && c0 > w && (c0-1-w) <= wp = (l0+1,c0-w)
+    updatePos x _ = x
+      
 -- | Preprocessing for concat wrapped lines and remove comment lines
 preproc :: BC.ByteString -> (BC.ByteString, PosTable)
-preproc xs = (BC.unlines ys, ptab)
+preproc xs = (str, ptab)
   where 
-    (ys, ptab) = stripComments $ unwrap $ (specLines xs, PosTable M.empty M.empty)
+    str = BC.unlines $ map llStr ys    
+    (ys, ptab) = lns xs
+      where
+        lns xs = stripComments $ unwrap $ (tokenizeLines $ specLines xs, [])
 
 specLines :: BC.ByteString -> [BC.ByteString]
 specLines xs = map cleanLine $ BC.lines xs
@@ -52,22 +58,30 @@ specLines xs = map cleanLine $ BC.lines xs
       where
         isCR c = c == '\r'
 
+
+tokenizeLines :: [BC.ByteString] -> [LdifLine]
+tokenizeLines xs = map tokenizeLine $ zip xs [1..]
+  where
+    tokenizeLine (x,i) | BC.null x        = LdifLine     i BC.empty
+                       | BC.head x == '#' = LdifComment  i x
+                       | BC.head x == ' ' = LdifLineCont i $ BC.tail x
+                       | otherwise        = LdifLine     i x
+                                            
 -- | Remove Comment Lines
-stripComments :: ([BC.ByteString],PosTable) -> ([BC.ByteString], PosTable)
-stripComments (input, ptab) = (filter (not . BC.isPrefixOf "#") input, ptab)
+stripComments :: ([LdifLine],PosTable) -> ([LdifLine],PosTable)
+stripComments (xs,pt) = foldl' procLine ([],pt) xs
+  where
+    procLine (v,p) (LdifComment i _) = (v,(PosOpAddLine i):p)
+    procLine (v,p) o                 = (o:v,p)
 
 -- | Unwrap lines, lines with space at begin is continue of previous line 
-unwrap :: ([BC.ByteString],PosTable) -> ([BC.ByteString],PosTable)
-unwrap (xs, ptab) = (takeLines xs, ptab)
-
-takeLines :: [BC.ByteString] -> [BC.ByteString]
-takeLines [] = []
-takeLines xs = let (ln,ys) = takeLine xs
-               in ln:takeLines ys
-
-takeLine :: [BC.ByteString] -> (BC.ByteString, [BC.ByteString])
-takeLine []  = (BC.empty,[])
-takeLine (x:[]) = (x,[])
-takeLine (x:xs) = let isCont z = " " `BC.isPrefixOf` z
-                  in (x `BC.append` (BC.concat $ map (BC.tail) $ takeWhile (isCont) xs), dropWhile (isCont) xs) 
-
+unwrap :: ([LdifLine],PosTable) -> ([LdifLine],PosTable)
+unwrap (xs,pt) = foldl' procLine ([],pt) xs
+  where
+    procLine ([],p) o = (o:[],p)
+    procLine (v,p) (LdifLineCont i s) = let (z,r) = splitAt 1 v
+                                            o = head z
+                                            o' = o { llStr = (llStr o) `BC.append` s }
+                                            p' = (PosOpWrap i (BC.length $ llStr o) (BC.length s)):p
+                                        in (o':r,p')
+    procLine (v,p) o                  = (o:v,p)

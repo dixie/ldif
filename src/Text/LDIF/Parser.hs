@@ -262,7 +262,9 @@ pFILL :: LDIFParserConfig -> Parser ()
 pFILL _ = skipMany (oneOf [' ', '\t'])
 
 pSEP :: LDIFParserConfig -> Parser ()
-pSEP _ = char '\n' >> return ()
+pSEP _ = do
+         _ <- newline
+         return ()
 
 pSEPs :: LDIFParserConfig -> Parser ()
 pSEPs conf = many (pSEP conf) >> return ()
