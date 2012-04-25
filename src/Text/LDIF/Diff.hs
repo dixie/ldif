@@ -1,11 +1,13 @@
 module Text.LDIF.Diff (
         diffLDIF,
-        diffRecord
+        diffRecord,
+        compareLDIF
 )
 where
 import Text.LDIF.Types
 import Text.LDIF.Utils
 import Data.Maybe
+import Data.List (foldl')
 
 -- | Create Change LDIF between to LDIF contents. 
 -- If any of input argument is not LDIFContent it returns Nothing. 
@@ -33,7 +35,7 @@ diffLDIF' l1@(LDIF _ c1) l2@(LDIF v2 c2) = LDIF v2 (changes ++ adds)
                               Just (ChangeRecord _ _)   -> error "Unexpected record type"
           content2add (ContentRecord dn vals) = ChangeRecord dn (ChangeAdd vals)
           content2add (ChangeRecord _ _)      = error "Unexpected record type"
-      changes = filter (not . isDummyRecord) $ foldl processEntry [] c1
+      changes = filter (not . isDummyRecord) $ foldl' processEntry [] c1
         where
           processEntry xs e1 = let change = case findRecordByDN l2 (reDN e1) of
                                      Nothing -> ChangeRecord (reDN e1) ChangeDelete
@@ -51,3 +53,18 @@ diffRecord r1 r2 | (reDN r1) /= (reDN r2) = Nothing
       delMods = map (\x -> ModDelete (fst x) [(snd x)]) delVals
       addVals = filter (\x -> not $ elem x (coAttrVals r1)) (coAttrVals r2) :: [AttrValue]
       delVals = filter (\x -> not $ elem x (coAttrVals r2)) (coAttrVals r1) :: [AttrValue]
+
+
+compareLDIF :: LDIF -> LDIF -> ([LDIFRecord], [LDIFRecord])
+compareLDIF l1@(LDIF _ c1) l2@(LDIF _ c2) = (r1, r2 ++ adds)
+   where 
+      adds = filter (not . isEntryIn l1) c2
+        where
+          isEntryIn ll ex = case findRecordByDN ll (reDN ex) of
+                              Nothing                   -> False
+                              (Just _)                  -> True
+      (r1,r2) = foldl' processEntry ([],[]) c1
+        where
+          processEntry (a1,a2) e1 = case findRecordByDN l2 (reDN e1) of
+            Nothing -> (e1:a1,a2)
+            Just e2 -> if e1 == e2 then (a1,a2) else (e1:a1,e2:a2)
