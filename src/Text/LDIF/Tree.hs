@@ -29,27 +29,29 @@ toTree (LDIF _ xs) True  = fromRecords $ addFakeParents xs
 addFakeParents :: [ LDIFRecord ] -> [ LDIFRecord ]        
 addFakeParents entries = fakeParents ++ entries
   where 
-    fakeParents = sortBy compareByDNLen $ map fakeParent missingDNs
+    fakeParents = map fakeParent missingDNs
       where
         fakeParent dn = ContentRecord dn []
-        compareByDNLen a b = (lengthOfDN $ reDN a) `compare` (lengthOfDN $ reDN b)
         missingDNs = filter ((flip S.notMember) allDNs) $ S.toList parentDNs
           where
             allDNs = S.fromList $ map reDN entries
             parentDNs =  S.fromList $ map DN $ filter (not . null) $ concatMap (tails . dnAttrVals) $ S.toList allDNs
     
+rootEntry :: Tree LDIFRecord    
+rootEntry = Node (ContentRecord (DN []) []) []
+
 fromRecords :: [LDIFRecord] -> Tree LDIFRecord
-fromRecords !xs = Z.toTree $ foldl' (\tree entry -> addEntry tree entry) rootEntry xs
+fromRecords xs = Z.toTree $ foldl' addEntry (Z.fromTree rootEntry) $ sortBy compareByDNLen xs
       where
-        rootEntry = Z.fromTree $ Node (ContentRecord (DN []) []) []
-        addEntry !tree !entry = Z.root $ Z.insert (Node entry []) (findParent tree)
+        compareByDNLen a b = (lengthOfDN $ reDN a) `compare` (lengthOfDN $ reDN b)
+        addEntry tree entry = Z.root $ Z.insert (Node entry []) $ findParent tree
           where
-            findParent !z | not $ Z.hasChildren z = Z.children z -- No children; put it here
-                          | isNothing child       = Z.children z -- No matching child; put it here
-                          | otherwise             = findParent (fromJust child) -- found matching child, continue
+            findParent z | not $ Z.hasChildren z = Z.children z -- No children; put it here
+                         | isNothing child       = Z.children z -- No matching child; put it here
+                         | otherwise             = findParent $ fromJust child -- found matching child, continue
               where
-                child = findChild (Z.firstChild z) -- Traverse all childs
+                child = findChild $ Z.firstChild z -- Traverse all childs
                   where
-                    findChild !Nothing  = Nothing -- Nothing found
-                    findChild !(Just c)  | (Z.label c) `isParentRecordOf` entry = Just c  -- Found
-                                         | otherwise                            = findChild (Z.next c) -- Continue
+                    findChild Nothing  = Nothing -- Nothing found
+                    findChild (Just c)  | (Z.label c) `isParentRecordOf` entry = Just c  -- Found
+                                        | otherwise                            = findChild $ Z.next c -- Continue
