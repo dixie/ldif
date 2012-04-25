@@ -7,7 +7,7 @@ where
 import Text.LDIF.Types
 import Text.LDIF.Utils
 import Data.Maybe
-import Data.List (foldl')
+import Data.List (foldl', sortBy)
 
 -- | Create Change LDIF between to LDIF contents. 
 -- If any of input argument is not LDIFContent it returns Nothing. 
@@ -56,8 +56,9 @@ diffRecord r1 r2 | (reDN r1) /= (reDN r2) = Nothing
 
 
 compareLDIF :: LDIF -> LDIF -> ([LDIFRecord], [LDIFRecord])
-compareLDIF l1@(LDIF _ c1) l2@(LDIF _ c2) = (r1, r2 ++ adds)
+compareLDIF l1@(LDIF _ c1) l2@(LDIF _ c2) = (sortBy cmpByDN r1, sortBy cmpByDN $ r2 ++ adds)
    where 
+      cmpByDN a b = (reDN a) `compare` (reDN b)
       adds = filter (not . isEntryIn l1) c2
         where
           isEntryIn ll ex = case findRecordByDN ll (reDN ex) of
