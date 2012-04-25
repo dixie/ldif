@@ -6,17 +6,20 @@ module Text.LDIF.Utils
 import Prelude
 import Text.LDIF.Types
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.Map as M
+
+type LDIFCache = M.Map DN LDIFRecord
+
+createLookupTable :: LDIF -> LDIFCache
+createLookupTable (LDIF _ xs) = M.fromList $ map (\x -> (reDN x, x)) xs
 
 -- | Find all Contents with given DN
 findRecordsByDN :: LDIF -> DN -> [LDIFRecord]
 findRecordsByDN (LDIF _ entries) dn = filter (\x -> (reDN x) == dn) entries
 
 -- | Find first Content with given DN
-findRecordByDN :: LDIF -> DN -> Maybe LDIFRecord
-findRecordByDN ldif dn = case findRecordsByDN ldif dn of
-                                 []   -> Nothing
-                                 xs   -> Just (head xs)
-
+findRecordByDN :: LDIFCache -> DN -> Maybe LDIFRecord
+findRecordByDN cache dn = M.lookup dn cache
 
 -- | Find fist Attribute within attributes pairs list
 lookupAttr :: BC.ByteString -> [AttrValue] -> Maybe Value

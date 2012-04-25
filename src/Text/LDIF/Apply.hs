@@ -20,7 +20,9 @@ applyLDIF dst (LDIF _ xs) = foldl' (\ld chg -> applyRecord2LDIF chg ld) dst xs
 -- | Apply one LDIF Content/Change Record into LDIF and produce Changed LDIF
 applyRecord2LDIF :: LDIFRecord -> LDIF -> LDIF
 applyRecord2LDIF (ContentRecord dn vals) dst = applyRecord2LDIF (ChangeRecord dn (ChangeAdd vals)) dst
-applyRecord2LDIF (ChangeRecord  dn op)   dst = applyChange2Record op dn dst (findRecordByDN dst dn)
+applyRecord2LDIF (ChangeRecord  dn op)   dst = applyChange2Record op dn dst (findRecordByDN dstc dn)
+  where
+    dstc = createLookupTable dst
 
 -- | Apply one LDIF Change (add/del/modf) for given DN within LDIF Content 
 applyChange2Record :: Change -> DN -> LDIF -> Maybe LDIFRecord -> LDIF
