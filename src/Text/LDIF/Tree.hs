@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns, OverloadedStrings #-}
 
 -- | LDIF representation in Data.Tree structure
-module Text.LDIF.Tree
+module Text.LDIF.Tree ( toTree, fromTree )
        where
 import Prelude
 import Text.LDIF.Types
@@ -23,21 +23,23 @@ fromTree !xs = ys `seq` LDIF Nothing ys
 
 -- | Convert LDIF to Tree using DNs. It can construct missing parents as an dummy records.
 toTree :: LDIF -> Bool -> Tree LDIFRecord
-toTree (LDIF _ entrs) fp = fromRecords entries'
-  where
-    entries' = if fp then addFakeParents entrs else entrs
+toTree (LDIF _ xs) False = fromRecords xs
+toTree (LDIF _ xs) True  = fromRecords $ addFakeParents xs
+        
+addFakeParents :: [ LDIFRecord ] -> [ LDIFRecord ]        
+addFakeParents entries = fakeParents ++ entries
+  where 
+    fakeParents = sortBy compareByDNLen $ map fakeParent missingDNs
       where
-        addFakeParents entries = (fakeEntries ++ entries)
-          where 
-            fakeEntries = sortBy compareByDNLen $ map fakeEntry missingDNs
-              where
-                fakeEntry dn = ContentRecord dn []
-                compareByDNLen a b = (lengthOfDN $ reDN a) `compare` (lengthOfDN $ reDN b)
-                missingDNs = filter ((flip S.notMember) allDNs) $ S.toList parentDNs
-                  where
-                    allDNs = S.fromList $ map reDN entries
-                    parentDNs =  S.fromList $ map DN $ filter (not . null) $ concatMap (tails . dnAttrVals) $ S.toList allDNs
-    fromRecords !xs = Z.toTree $ foldl' (\tree entry -> addEntry tree entry) rootEntry xs
+        fakeParent dn = ContentRecord dn []
+        compareByDNLen a b = (lengthOfDN $ reDN a) `compare` (lengthOfDN $ reDN b)
+        missingDNs = filter ((flip S.notMember) allDNs) $ S.toList parentDNs
+          where
+            allDNs = S.fromList $ map reDN entries
+            parentDNs =  S.fromList $ map DN $ filter (not . null) $ concatMap (tails . dnAttrVals) $ S.toList allDNs
+    
+fromRecords :: [LDIFRecord] -> Tree LDIFRecord
+fromRecords !xs = Z.toTree $ foldl' (\tree entry -> addEntry tree entry) rootEntry xs
       where
         rootEntry = Z.fromTree $ Node (ContentRecord (DN []) []) []
         addEntry !tree !entry = Z.root $ Z.insert (Node entry []) (findParent tree)
