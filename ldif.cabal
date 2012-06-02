@@ -54,11 +54,11 @@ Library
   Build-Depends:   base         < 5,
                    filepath,
                    bytestring,
-                   containers   <= 0.3.0.0,
-                   cmdargs      >= 0.2,
+                   containers,
+                   cmdargs,
                    directory,
-                   rosezipper   >= 0.2,
-                   parsec       >= 3.1.0
+                   rosezipper,
+                   parsec       == 3.*
   Hs-Source-Dirs:  src
   Extensions:      CPP, PatternGuards
   Ghc-Options:      -Wall -fno-warn-orphans -O2
