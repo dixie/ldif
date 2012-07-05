@@ -50,6 +50,10 @@ flag test
   description: Build test program.
   default:     False
 
+flag cmd
+  description: Build command line programs.
+  default:     False
+
 Library
   Build-Depends:   base         < 5,
                    filepath,
@@ -79,24 +83,36 @@ Library
 Executable ldifdiff
   Hs-Source-Dirs:  src
   Main-Is:         ldifdiff.hs
+  Buildable:       False
+  if flag(cmd)
+    Buildable:     True
   if flag(test)
     Buildable:     False
 
 Executable ldif2html
   Hs-Source-Dirs:  src
   Main-Is:         ldif2html.hs
+  Buildable:       False
+  if flag(cmd)
+    Buildable:     True
   if flag(test)
     Buildable:     False
 
 Executable ldifmodify
   Hs-Source-Dirs:  src
   Main-Is:         ldifmodify.hs
+  Buildable:       False
+  if flag(cmd)
+    Buildable:     True
   if flag(test)
     Buildable:     False
 
 Executable ldifundo
   Hs-Source-Dirs:  src
   Main-Is:         ldifundo.hs
+  Buildable:       False
+  if flag(cmd)
+    Buildable:     True
   if flag(test)
     Buildable:     False
 
