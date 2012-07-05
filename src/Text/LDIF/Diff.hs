@@ -25,7 +25,7 @@ diffLDIF l1 l2 | getLDIFType l1 == LDIFContentType && getLDIFType l2 == LDIFCont
                                          ++(show $ getLDIFType l2))
 
 diffLDIF' :: LDIF -> LDIF -> LDIF
-diffLDIF' l1@(LDIF _ c1) l2@(LDIF v2 c2) = LDIF v2 (changes ++ adds)
+diffLDIF' l1@(LDIF _ c1) l2@(LDIF v2 c2) = LDIF v2 (changes ++ deletes ++ adds)
    where 
       adds = map content2add $ filter (not . isEntryIn) c2
         where
@@ -36,13 +36,15 @@ diffLDIF' l1@(LDIF _ c1) l2@(LDIF v2 c2) = LDIF v2 (changes ++ adds)
             Just (ChangeRecord _ _)   -> error "Unexpected record type"
           content2add (ContentRecord dn vals) = ChangeRecord dn (ChangeAdd vals)
           content2add (ChangeRecord _ _)      = error "Unexpected record type"
-      changes = filter (not . isDummyRecord) $ foldl' processEntry [] c1
+      (changes,deletes) = (reverse $ fnu changes', fnu deletes')
         where
+          fnu = filter (not . isDummyRecord)
           l2c = createLookupTable l2
-          processEntry xs e1 = let change = case findRecordByDN l2c (reDN e1) of
-                                     Nothing -> ChangeRecord (reDN e1) ChangeDelete
-                                     Just e2 -> fromJust $ diffRecord e1 e2
-                               in xs ++ [change]
+          (changes',deletes') = foldl' processEntry ([],[]) c1
+          processEntry (cx,dx) e1 = procEntry' $ findRecordByDN l2c (reDN e1)
+            where
+              procEntry' Nothing   = (cx, (ChangeRecord (reDN e1) ChangeDelete):dx)
+              procEntry' (Just e2) = ((fromJust $ diffRecord e1 e2):cx, dx)
 
 -- | Diff two AttrVal Records if any of provided. 
 --   Implementation uses inefficient algorithm for large count of attributes within ContentRecord.
