@@ -74,7 +74,20 @@ data Modify = ModAdd     { modAttr :: !Attribute, modAttrVals :: ![Value] }
             | ModReplace { modAttr :: !Attribute, modAttrVals :: ![Value] } deriving (Show, Eq)
 
 -- | Represents Distinguished Name (DN)
-data DN = DN { dnAttrVals :: ![AttrValue] } deriving (Eq, Ord, Show)
+data DN = DN { dnAttrVals :: ![AttrValue] } deriving (Eq, Show)
+
+-- | Ord Instance for DN
+instance Ord DN where
+  (DN xs1) `compare` (DN xs2)  = let cmpAV ((a1,v1),(a2,v2)) = let ca = a1 `compare` a2
+                                                                   cv = v1 `compare` v2
+                                                               in if ca == EQ then cv else ca
+                                     dx = map cmpAV $ zip (reverse $ xs1) (reverse $ xs2)
+                                     lx | length xs1 > length xs2 = GT
+                                        | length xs1 < length xs2 = LT
+                                        | otherwise = EQ
+                                 in case filter (EQ /=) dx of
+                                   []    -> lx
+                                   (x:_) -> x
 
 -- | Check if LDIFRecord is Content Record
 isContentRecord :: LDIFRecord -> Bool
