@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns, OverloadedStrings #-}
 
 -- | LDIF representation in Data.Tree structure
-module Text.LDIF.Tree ( toTree, fromTree )
+module Text.LDIF.Tree ( toTree, fromTree, sortTreeByName )
        where
 import Prelude
 import Text.LDIF.Types
@@ -55,3 +55,10 @@ fromRecords xs = Z.toTree $ foldl' addEntry (Z.fromTree rootEntry) $ sortBy comp
                     findChild Nothing  = Nothing -- Nothing found
                     findChild (Just c)  | (Z.label c) `isParentRecordOf` entry = Just c  -- Found
                                         | otherwise                            = findChild $ Z.next c -- Continue
+
+-- | Sort recursively Children by comparing DNs
+sortTreeByName :: Tree LDIFRecord -> Tree LDIFRecord
+sortTreeByName (Node n []) = Node n []
+sortTreeByName (Node n xs) = let ys = sortBy cmpDN xs
+                                 cmpDN a b = (reDN $ rootLabel a) `compare` (reDN $ rootLabel b)
+                             in Node n (map sortTreeByName ys)
